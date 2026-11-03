@@ -33,6 +33,7 @@ adds on first start. **In Localix**, install it from the Store (Plugins), then t
 mini-app create <name> [--title "…"] [--description "…"] [--dir <folder>]
 mini-app check [folder]      mini-app build [folder]      mini-app install [folder]
 mini-app test [folder] [files…]                         mini-app api [module [export] | word]
+mini-app pattern [name]
 mini-app pack [folder] --publisher "…" [--out <dir>]      mini-app validate <package | .tar.gz>
 mini-app icon [folder] --glyph '<path d="…"/>' [--tint #hex]
 mini-app ci [folder] [--publisher "…"] [--repository <owner>/<repo>]
@@ -46,6 +47,9 @@ the SDK's app layer (`createMiniApp`, `defineCollection`, `useCollection`, `scre
 domain and the screen; `mini-app contract` prints it again any time. `mini-app api <module>` prints
 what a kit or SDK module exports, with its types — the props of a dialog, a table or a chart — and
 `mini-app test [folder] [files…]` runs the app's tests alone, as the check runs them.
+`mini-app pattern [name]` prints working screens from the plugin's gallery (`patterns/`, a mini app
+checked against every kit like the template): a page frame, a board, master-detail, a data table, a
+form dialog, a dashboard, the loading/empty/error states and the formatting helpers.
 
 ## Publishing from GitHub
 

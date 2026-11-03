@@ -58,6 +58,9 @@ The request: $ARGUMENTS
   read `AGENTS.md` now (it repeats that message for later sessions), search `KIT.md` for the module
   that does a job rather than reading it whole, and read that module's props with
   `mini-app api <module>`. Never search the disk for SDK or kit sources: `mini-app api` prints them.
+- Build each screen from a working one: `mini-app pattern` lists the gallery (page frame, board,
+  master-detail, data table, form dialog, dashboard, states, formatting) and `mini-app pattern <name>`
+  prints one with its test. Copy it, rename the domain, keep its layout, states and formatting.
 - A mini app's backend runs unsandboxed inside Localix, and an installed one starts enabled: keep
   each tool honest about what it changes.
 - Never edit `dist/`, `tsconfig.json` or `KIT.md`: the checks rewrite them.

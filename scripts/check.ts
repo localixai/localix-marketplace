@@ -6,7 +6,7 @@ import { kitDir, ROOT } from './kit'
 /**
  * Check every mini app (or the ones named) with the same toolchain any mini app is checked with —
  * `mini-app check`: manifest, style, routes, store media, backend and UI builds, types and tests.
- * The template the authoring plugin copies is one of them.
+ * The template the authoring plugin copies, and its pattern gallery, are two of them.
  *
  * `mini-apps` checks every mini app and nothing else: what a Localix release runs against the kit it is
  * about to publish (`MINI_APP_KIT=<kit>`), where Claude Code is not installed.
@@ -20,6 +20,8 @@ import { kitDir, ROOT } from './kit'
  */
 const MINI_APPS = join(ROOT, 'mini-apps')
 const TEMPLATE = join(ROOT, 'plugins', 'mini-app-authoring', 'template')
+/** The working screens `mini-app pattern` prints: checked against every kit, like the template. */
+const PATTERNS = join(ROOT, 'plugins', 'mini-app-authoring', 'patterns')
 const TOOL = join(ROOT, 'plugins', 'mini-app-authoring', 'bin', 'mini-app')
 
 const onlyMiniApps = process.argv.includes('mini-apps')
@@ -61,6 +63,7 @@ const all = [
     .filter((name) => existsSync(join(MINI_APPS, name, '.localix-mini-app', 'mini-app.json')))
     .map((name) => join(MINI_APPS, name)),
   TEMPLATE,
+  PATTERNS,
 ]
 const targets = apps.length
   ? all.filter((dir) => apps.some((name) => dir.endsWith(`/${name}`)))

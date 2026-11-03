@@ -23,6 +23,7 @@ import { MINI_APP_NAME_RE, scaffoldMiniApp, toMiniAppName } from '../scaffold/sc
 import { stringOption } from './args'
 import { type CliContext, type Command, folder, readManifest } from './context'
 import { apiCommand } from './api-command'
+import { patternCommand } from './pattern-command'
 import { kitInfo, sayContractDiffers } from './kit-command'
 import { testCommand } from './test-command'
 import { buildPackage } from './build-package'
@@ -231,6 +232,7 @@ export const HELP = `mini-app — create, check, build, install and share Locali
   mini-app check [folder] [--json] [--template]   every gate Localix applies, in one report
   mini-app test [folder] [files…]        run the app's tests alone, as check runs them
   mini-app api [module [export] | word]  the kit's API: a module's exports with their types, or names found
+  mini-app pattern [name]                working screens to copy: page frame, board, master-detail, table, form dialog, dashboard, states
   mini-app build [folder]                check, then write the package to <folder>/dist/package
   mini-app install [folder]              build, then install into the running Localix
   mini-app pack [folder] [--out <dir>] [--publisher "…"]   add the app to a releasable marketplace
@@ -254,6 +256,7 @@ export const COMMANDS: Record<string, Command> = {
   check,
   test: testCommand,
   api: apiCommand,
+  pattern: patternCommand,
   build,
   install,
   pack,

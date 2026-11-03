@@ -5,7 +5,7 @@ description:
   decisions, semantic search, waking the agent, store media. Load when writing or changing any part
   of a Localix mini app.
 user-invocable: false
-allowed-tools: Bash(mini-app contract) Bash(${CLAUDE_PLUGIN_ROOT}/bin/mini-app contract) Bash(mini-app api:*) Bash(mini-app test:*)
+allowed-tools: Bash(mini-app contract) Bash(${CLAUDE_PLUGIN_ROOT}/bin/mini-app contract) Bash(mini-app api:*) Bash(mini-app pattern:*) Bash(mini-app test:*)
 ---
 
 # The Localix mini app format
@@ -55,5 +55,8 @@ If it does not appear below, run `mini-app contract` and read it before writing 
   module's exports with their types (`mini-app api dialog`, `mini-app api ui/stats-charts`),
   `mini-app api <module> <export>` one of them, and `mini-app api <word>` finds names. Look a prop
   up there before guessing it or hand-rolling a control.
+- Whole screens to start from: `mini-app pattern` lists them, `mini-app pattern <name>` prints one
+  with its test — a page frame, a board with drag and drop, master-detail, a data table with bulk
+  actions, a form dialog, a dashboard, the loading/empty/error states and the formatting helpers.
 - Localix's guides: https://github.com/rsaryev/localix/tree/main/docs/extending — `mini-apps.md`,
   `mini-app-ui.md`, `mini-app-semantics.md` and `mini-app-publishing.md`.

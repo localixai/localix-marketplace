@@ -11,11 +11,16 @@ const staged = Bun.spawnSync(['git', 'diff', '--cached', '--name-only', '--diff-
 const miniApps = [
   ...new Set(staged.flatMap((file) => /^mini-apps\/([^/]+)\//u.exec(file)?.[1] ?? [])),
 ].sort()
-const template = staged.some((file) => file.startsWith('plugins/mini-app-authoring/template/'))
+// The template and the pattern gallery are mini apps of the plugin's own: a change to one checks it.
+const GALLERIES = { template: 'plugins/mini-app-authoring/template/', patterns: 'plugins/mini-app-authoring/patterns/' }
+const galleries = Object.entries(GALLERIES)
+  .filter(([, prefix]) => staged.some((file) => file.startsWith(prefix)))
+  .map(([name]) => name)
 const plugin = staged.some(
   (file) =>
     file.startsWith('scripts/') ||
-    (file.startsWith('plugins/') && !file.startsWith('plugins/mini-app-authoring/template/')),
+    (file.startsWith('plugins/') &&
+      !Object.values(GALLERIES).some((prefix) => file.startsWith(prefix))),
 )
 
 const run = (cmd: string[], cwd = ROOT) => {
@@ -26,5 +31,5 @@ const run = (cmd: string[], cwd = ROOT) => {
 
 // The authoring plugin builds every mini app: a change to it checks the plugins and them all.
 if (plugin || staged.includes('.claude-plugin/marketplace.json')) run(['bun', 'scripts/check.ts'])
-else if (miniApps.length || template)
-  run(['bun', 'scripts/check.ts', ...miniApps, ...(template ? ['template'] : [])])
+else if (miniApps.length || galleries.length)
+  run(['bun', 'scripts/check.ts', ...miniApps, ...galleries])
