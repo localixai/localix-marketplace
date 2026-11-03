@@ -15,13 +15,16 @@ import {
   APP_LAYER_API_VERSION,
   BEYOND_COLLECTIONS,
   DESIGN_BRIEF,
+  LARGER_APPS,
 } from '../scaffold/contract'
 import { drawIcon } from '../scaffold/icon'
 import { agentInstruction } from '../scaffold/prose'
 import { MINI_APP_NAME_RE, scaffoldMiniApp, toMiniAppName } from '../scaffold/scaffold'
 import { stringOption } from './args'
 import { type CliContext, type Command, folder, readManifest } from './context'
+import { apiCommand } from './api-command'
 import { kitInfo, sayContractDiffers } from './kit-command'
+import { testCommand } from './test-command'
 import { buildPackage } from './build-package'
 import { marketplaceCommand } from './marketplace-command'
 import { keygen, signCommand } from './signing-commands'
@@ -122,10 +125,7 @@ const pack: Command = async (args, context) => {
   }
   const built = await buildPackage(dir, context)
   if (!built) return 1
-  const outDir = resolve(
-    context.cwd,
-    stringOption(args, 'out') ?? join(dir, 'dist', 'marketplace'),
-  )
+  const outDir = resolve(context.cwd, stringOption(args, 'out') ?? join(dir, 'dist', 'marketplace'))
   const { kit } = await context.kit()
   const entry = await packIntoMarketplace({ kit, packageDir: built.packageDir, outDir, publisher })
   const release = kit.tools.marketplace.releaseFile
@@ -209,7 +209,9 @@ const ci: Command = async (args, context) => {
 
 /** The contract `create` prints, any time: what a skill injects and an agent re-reads. */
 const contract: Command = async (_args, context) => {
-  context.out([AGENT_PARTNERSHIP, APP_LAYER, BEYOND_COLLECTIONS, DESIGN_BRIEF].join('\n\n'))
+  context.out(
+    [AGENT_PARTNERSHIP, APP_LAYER, BEYOND_COLLECTIONS, LARGER_APPS, DESIGN_BRIEF].join('\n\n'),
+  )
   return 0
 }
 
@@ -227,6 +229,8 @@ export const HELP = `mini-app — create, check, build, install and share Locali
 
   mini-app create <name> [--title "…"] [--description "…"] [--dir <folder>] [--no-check]
   mini-app check [folder] [--json] [--template]   every gate Localix applies, in one report
+  mini-app test [folder] [files…]        run the app's tests alone, as check runs them
+  mini-app api [module [export] | word]  the kit's API: a module's exports with their types, or names found
   mini-app build [folder]                check, then write the package to <folder>/dist/package
   mini-app install [folder]              build, then install into the running Localix
   mini-app pack [folder] [--out <dir>] [--publisher "…"]   add the app to a releasable marketplace
@@ -248,6 +252,8 @@ downloaded, verified and installed into the app.`
 export const COMMANDS: Record<string, Command> = {
   create,
   check,
+  test: testCommand,
+  api: apiCommand,
   build,
   install,
   pack,

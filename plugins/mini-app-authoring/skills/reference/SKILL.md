@@ -5,7 +5,7 @@ description:
   decisions, semantic search, waking the agent, store media. Load when writing or changing any part
   of a Localix mini app.
 user-invocable: false
-allowed-tools: Bash(mini-app contract) Bash(${CLAUDE_PLUGIN_ROOT}/bin/mini-app contract)
+allowed-tools: Bash(mini-app contract) Bash(${CLAUDE_PLUGIN_ROOT}/bin/mini-app contract) Bash(mini-app api:*) Bash(mini-app test:*)
 ---
 
 # The Localix mini app format
@@ -18,8 +18,9 @@ and never put `.localix-mini-app/` in a plugin.
 **Trust:** a mini app's backend runs unsandboxed in the Localix API process, and an installed one
 starts enabled, so keep its tools honest about their effects.
 
-The toolchain is the `mini-app` command: `create`, `check`, `build`, `install`, `pack`, `validate`,
-`icon`, `ci` (release from GitHub), `contract`. Inside a mini app made by `mini-app create`,
+The toolchain is the `mini-app` command: `create`, `check`, `test` (one test file alone), `api` (a
+kit or SDK module's exports with their types), `build`, `install`, `pack`, `validate`, `icon`, `ci`
+(release from GitHub), `contract`. Inside a mini app made by `mini-app create`,
 `AGENTS.md` and `KIT.md` describe that app and every module of the host kit.
 
 ## The folder
@@ -50,7 +51,9 @@ If it does not appear below, run `mini-app contract` and read it before writing 
 - [format.md](format.md) — `mini-app.json` field by field, `guide.md`, slash commands, store media.
 - [recipes.md](recipes.md) — logging from a photo, a setting, tests, one state per chat, a button
   that wakes the agent, a choice the app makes itself, ordering by meaning.
-- The contract of every call is the SDK's `.d.ts` files named by the `paths` of the app's generated
-  `tsconfig.json`; read and search them before hand-rolling anything.
+- Every kit control's props and every SDK call's signature: `mini-app api <module>` prints the
+  module's exports with their types (`mini-app api dialog`, `mini-app api ui/stats-charts`),
+  `mini-app api <module> <export>` one of them, and `mini-app api <word>` finds names. Look a prop
+  up there before guessing it or hand-rolling a control.
 - Localix's guides: https://github.com/rsaryev/localix/tree/main/docs/extending — `mini-apps.md`,
   `mini-app-ui.md`, `mini-app-semantics.md` and `mini-app-publishing.md`.

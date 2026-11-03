@@ -16,7 +16,6 @@ import {
   type TemplateScaffold,
 } from './template-layout'
 
-
 /**
  * Fork the kit's reference mini app into a new mini app at `dir`.
  *
@@ -203,10 +202,7 @@ export async function scaffoldMiniApp(input: ScaffoldInput): Promise<ScaffoldRes
       // The template's author is Localix's, not the copy's: its own is set when it is published.
       author: undefined,
     })
-    await fs.writeFile(
-      join(staging, 'README.md'),
-      readme({ name, displayName, description, scaffold }),
-    )
+    await fs.writeFile(join(staging, 'README.md'), readme({ name, displayName, description }))
     await fs.writeFile(join(staging, 'AGENTS.md'), agentsMd({ name, displayName, kit, scaffold }))
     await writeKitCatalog(kit, staging)
     // Ready for git from the start: what the checks generate never reaches a repository.

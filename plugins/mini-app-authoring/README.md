@@ -32,6 +32,7 @@ adds on first start. **In Localix**, install it from the Store (Plugins), then t
 ```text
 mini-app create <name> [--title "…"] [--description "…"] [--dir <folder>]
 mini-app check [folder]      mini-app build [folder]      mini-app install [folder]
+mini-app test [folder] [files…]                         mini-app api [module [export] | word]
 mini-app pack [folder] --publisher "…" [--out <dir>]      mini-app validate <package | .tar.gz>
 mini-app icon [folder] --glyph '<path d="…"/>' [--tint #hex]
 mini-app ci [folder] [--publisher "…"] [--repository <owner>/<repo>]
@@ -42,7 +43,9 @@ A new app is a copy of this plugin's reference app, Daily Log (`template/`), who
 routes, storage, the feed that updates an open screen when the agent writes, semantic search — is
 the SDK's app layer (`createMiniApp`, `defineCollection`, `useCollection`, `screenUi`).
 `mini-app create` prints the whole contract with the instruction, so the agent writes only the
-domain and the screen; `mini-app contract` prints it again any time.
+domain and the screen; `mini-app contract` prints it again any time. `mini-app api <module>` prints
+what a kit or SDK module exports, with its types — the props of a dialog, a table or a chart — and
+`mini-app test [folder] [files…]` runs the app's tests alone, as the check runs them.
 
 ## Publishing from GitHub
 

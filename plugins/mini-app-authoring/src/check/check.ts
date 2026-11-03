@@ -56,7 +56,12 @@ export interface CheckOutputs {
   hasUi: boolean
 }
 
-export type TestRunner = (input: { miniAppDir: string; preload: string }) => Promise<{
+export type TestRunner = (input: {
+  miniAppDir: string
+  preload: string
+  /** Only these test files or folders (`bun test` filters); every test when absent. */
+  filters?: readonly string[]
+}) => Promise<{
   ok: boolean
   output: string
 }>
@@ -72,8 +77,8 @@ function tail(output: string): string[] {
 }
 
 /** `bun test` with the kit's preload serving the host's shared modules. */
-export const runMiniAppTests: TestRunner = async ({ miniAppDir, preload }) => {
-  const run = await runBun(['test', '--preload', preload], miniAppDir, TEST_TIMEOUT_MS)
+export const runMiniAppTests: TestRunner = async ({ miniAppDir, preload, filters = [] }) => {
+  const run = await runBun(['test', '--preload', preload, ...filters], miniAppDir, TEST_TIMEOUT_MS)
   return { ok: run.code === 0, output: run.output }
 }
 
