@@ -29,6 +29,9 @@ const run = (cmd: string[], cwd = ROOT) => {
   if (result.exitCode !== 0) process.exit(result.exitCode ?? 1)
 }
 
+// A plugin that changes must raise its version, or no install ever receives the change.
+run(['bun', 'scripts/plugin-versions.ts', '--staged'])
+
 // The authoring plugin builds every mini app: a change to it checks the plugins and them all.
 if (plugin || staged.includes('.claude-plugin/marketplace.json')) run(['bun', 'scripts/check.ts'])
 else if (miniApps.length || galleries.length)

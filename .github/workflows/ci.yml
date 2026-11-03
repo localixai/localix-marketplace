@@ -17,9 +17,17 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
       - uses: oven-sh/setup-bun@v2
         with:
           bun-version-file: .bun-version
+      # A plugin that changed must raise its version, or no install ever receives the change.
+      - name: Plugin versions
+        if: github.event_name != 'push' || !startsWith(github.event.before, '0000000')
+        env:
+          BASE: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || github.event.before }}
+        run: bun scripts/plugin-versions.ts "$BASE" "$GITHUB_SHA"
       - run: bun install --frozen-lockfile
       # `claude plugin validate` checks the plugins (each --strict) and the marketplace.
       - name: Claude Code
