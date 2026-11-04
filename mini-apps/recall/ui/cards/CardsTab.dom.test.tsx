@@ -470,3 +470,22 @@ test('all mode: Accept drafts sends the match and the count', async () => {
     await screen.unmount()
   }
 })
+
+test('once all mode is entered and the screen has settled, nothing more is asked or published', async () => {
+  const screen = await cards({ rows: many(120) })
+  try {
+    await screen.act(async () => click(byLabel('Select all shown cards')))
+    await screen.act(async () => click(barButton('Select all 120 cards')!))
+    await screen.settle()
+    const asked = screen.fake.calls.length
+    const published = screen.contexts.length
+    // Longer than any debounce or poll the screen has: a loop would show as more requests or publishes.
+    for (let second = 0; second < 4; second += 1) {
+      await screen.act(async () => void (await new Promise((resolve) => setTimeout(resolve, 250))))
+    }
+    expect(screen.fake.calls.length).toBe(asked)
+    expect(screen.contexts.length).toBe(published)
+  } finally {
+    await screen.unmount()
+  }
+})

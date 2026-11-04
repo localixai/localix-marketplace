@@ -1,19 +1,21 @@
 import { expect, test } from 'bun:test'
-import { act } from 'react'
-import { createRoot } from 'react-dom/client'
 import { Md } from './Md'
 import { FakeAudio, bindBackend, click, setupDom, setupFakeAudio } from './test-support'
 
 setupDom()
 setupFakeAudio()
 
+// react-dom is loaded here, after the DOM exists (see setupDom), never at the top of the file.
 async function render(markdown: string) {
+  const { act } = await import('react')
+  const { createRoot } = await import('react-dom/client')
   const fake = bindBackend()
   const container = document.createElement('div')
   document.body.append(container)
   const root = createRoot(container)
   await act(async () => root.render(<Md>{markdown}</Md>))
   return {
+    act,
     container,
     done: async () => {
       await act(async () => root.unmount())
@@ -33,7 +35,7 @@ test('sounds leave the text and come back as play buttons after it, one per soun
       b.getAttribute('aria-label'),
     )
     expect(names).toEqual(['Play sound', 'Play sound 2'])
-    await act(async () => click(view.container.querySelectorAll('button')[1]!))
+    await view.act(async () => click(view.container.querySelectorAll('button')[1]!))
     expect(FakeAudio.instances.map((a) => a.src)).toEqual(['/rpc/recall/media/b.ogg'])
   } finally {
     await view.done()

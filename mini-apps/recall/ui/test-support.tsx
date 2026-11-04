@@ -32,6 +32,25 @@ export const PRIMARY: KeyboardEventInit = formatChordText("mod+enter").startsWit
   : { metaKey: true };
 export * as fx from "./test-fixtures";
 
+let domRegisteredOnce = false;
+
+/**
+ * React DOM decides what the page can do (inputs, events) when it is first loaded. Loaded before any
+ * DOM exists, it stays that way for every later file in the run: typing then fails in files that
+ * have nothing to do with the one that loaded it. So the first file registers the DOM, then loads it.
+ */
+function assertReactDomLoadsAfterTheDom(): void {
+  if (domRegisteredOnce) return;
+  domRegisteredOnce = true;
+  const early = Object.keys(require.cache ?? {}).filter((path) => /react-dom[-\\/]client/.test(path));
+  if (early.length > 0) {
+    throw new Error(
+      "react-dom was loaded before the DOM existed (a static import of react-dom/client in a test file). " +
+        "Load it inside the test with `await import(...)`, as mount() does, so every later file types normally.",
+    );
+  }
+}
+
 /** Register a DOM, the host's doubles and React's act environment for the file's tests. */
 export function setupDom(): void {
   let teardown: () => Promise<void>;
@@ -39,6 +58,7 @@ export function setupDom(): void {
   const env = globalThis as typeof globalThis & { IS_REACT_ACT_ENVIRONMENT?: boolean };
   const prior = env.IS_REACT_ACT_ENVIRONMENT;
   beforeAll(() => {
+    assertReactDomLoadsAfterTheDom();
     teardown = registerDom();
     unbindDoubles = bindMiniAppUiTestDoubles();
     env.IS_REACT_ACT_ENVIRONMENT = true;
@@ -392,9 +412,61 @@ export interface Mounted {
  * every test after it (one timeout in CI once failed 22 more).
  */
 const leftovers = new Set<() => Promise<void>>();
+
+/** Timers a test started and nothing has cleared: where they were started and how long they wait. */
+const pendingTimers = new Map<unknown, string>();
+const realTimers = {
+  setTimeout: globalThis.setTimeout,
+  setInterval: globalThis.setInterval,
+  clearTimeout: globalThis.clearTimeout,
+  clearInterval: globalThis.clearInterval,
+};
+
+function whereStarted(): string {
+  const frames = (new Error().stack ?? "").split("\n").slice(2);
+  return (frames.find((line) => !line.includes("test-support")) ?? "").trim();
+}
+
+beforeEach(() => {
+  pendingTimers.clear();
+  const track = (kind: "setTimeout" | "setInterval") =>
+    ((handler: TimerHandler, delay?: number, ...rest: unknown[]) => {
+      const wrapped =
+        kind === "setTimeout" && typeof handler === "function"
+          ? (...args: unknown[]) => {
+              pendingTimers.delete(id);
+              return (handler as (...a: unknown[]) => unknown)(...args);
+            }
+          : handler;
+      const id = (realTimers[kind] as any)(wrapped, delay, ...rest);
+      pendingTimers.set(id, `${kind}(${delay ?? 0} ms) from ${whereStarted()}`);
+      return id;
+    }) as unknown as typeof setTimeout;
+  const untrack = (kind: "clearTimeout" | "clearInterval") =>
+    ((id?: unknown) => {
+      pendingTimers.delete(id);
+      return (realTimers[kind] as any)(id);
+    }) as unknown as typeof clearTimeout;
+  globalThis.setTimeout = track("setTimeout");
+  globalThis.setInterval = track("setInterval") as unknown as typeof setInterval;
+  globalThis.clearTimeout = untrack("clearTimeout");
+  globalThis.clearInterval = untrack("clearInterval") as unknown as typeof clearInterval;
+});
+
 afterEach(async () => {
   for (const unmount of [...leftovers]) await unmount().catch(() => {});
   leftovers.clear();
+  const leaked = [...pendingTimers.values()];
+  for (const id of pendingTimers.keys()) {
+    realTimers.clearTimeout(id as never);
+    realTimers.clearInterval(id as never);
+  }
+  pendingTimers.clear();
+  Object.assign(globalThis, realTimers);
+  // Whatever the screen started is gone with it; a timer left over would run inside the next test.
+  if (leaked.length > 0) {
+    throw new Error(`The test left ${leaked.length} timer(s) running after the screen was unmounted:\n${leaked.join("\n")}`);
+  }
 });
 
 /** How long one act may take before the test names the step that hung, not just "timed out". */
