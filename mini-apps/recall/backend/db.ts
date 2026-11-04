@@ -87,6 +87,11 @@ const MIGRATIONS: readonly string[] = [
     value TEXT NOT NULL
   );
   `,
+  // 2: a note's own cards by pause, state and due. Without it the planner prefers cards_queue
+  // (paused=?) for the library's per-note subqueries and walks every paused card for every note.
+  `
+  CREATE INDEX cards_note_state ON cards(note_id, paused, state, due);
+  `,
 ]
 
 export const SCHEMA_VERSION = MIGRATIONS.length

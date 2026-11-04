@@ -56,8 +56,12 @@ export function libraryWhere(query: LibraryQuery, rankedIds?: readonly string[])
   return { sql: parts.join(' AND '), params }
 }
 
+export const countSql = (where: Clause): string => `SELECT COUNT(*) AS n FROM notes n WHERE ${where.sql}`
+export const pageSql = (where: Clause, sort: LibrarySort): string =>
+  `SELECT n.* FROM notes n WHERE ${where.sql} ORDER BY ${SORT_SQL[sort]} LIMIT $limit OFFSET $offset`
+
 export function countWhere(db: Db, where: Clause): number {
-  return (db.query(`SELECT COUNT(*) AS n FROM notes n WHERE ${where.sql}`).get(where.params) as { n: number }).n
+  return (db.query(countSql(where)).get(where.params) as { n: number }).n
 }
 
 /** One page of notes. With `rankedIds`, in that order. */
@@ -81,7 +85,7 @@ export function pageWhere(
   }
   return (
     db
-      .query(`SELECT n.* FROM notes n WHERE ${where.sql} ORDER BY ${SORT_SQL[sort]} LIMIT $limit OFFSET $offset`)
+      .query(pageSql(where, sort))
       .all({ ...where.params, limit, offset }) as Parameters<typeof toNote>[0][]
   ).map(toNote)
 }
