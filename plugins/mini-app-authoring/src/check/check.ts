@@ -1,22 +1,22 @@
-import { randomUUID } from 'node:crypto'
-import { promises as fs } from 'node:fs'
-import { join } from 'node:path'
+import { randomUUID } from "node:crypto";
+import { promises as fs } from "node:fs";
+import { join } from "node:path";
 
-import { backendSource, buildMiniAppBackend } from '../build/backend-build'
-import { assertSafeAuthoringPaths } from '../build/output-paths'
-import { buildMiniAppUi } from '../build/ui-build'
-import type { Kit } from '../kit/kit'
-import { writeKitCatalog } from '../kit/kit-files'
-import { errorMessage } from '../lib/errors'
-import { MANIFEST_FILE } from '../lib/manifest-file'
-import { runBun } from '../lib/run-bun'
-import { findTemplateResidue, listFiles, loadTemplateScaffold } from '../scaffold/template-layout'
-import { checkMiniAppBindings } from './bindings'
-import { checkMiniAppStoreMedia } from './media'
-import { checkMiniAppRoutes } from './routes'
-import { checkMiniAppSecrets } from './secrets'
-import { checkMiniAppStyle } from './style'
-import { typecheckMiniApp, writeMiniAppTsconfig } from './typecheck'
+import { backendSource, buildMiniAppBackend } from "../build/backend-build";
+import { assertSafeAuthoringPaths } from "../build/output-paths";
+import { buildMiniAppUi } from "../build/ui-build";
+import type { Kit } from "../kit/kit";
+import { writeKitCatalog } from "../kit/kit-files";
+import { errorMessage } from "../lib/errors";
+import { MANIFEST_FILE } from "../lib/manifest-file";
+import { runBun } from "../lib/run-bun";
+import { findTemplateResidue, listFiles, loadTemplateScaffold } from "../scaffold/template-layout";
+import { checkMiniAppBindings } from "./bindings";
+import { checkMiniAppStoreMedia } from "./media";
+import { checkMiniAppRoutes } from "./routes";
+import { checkMiniAppSecrets } from "./secrets";
+import { checkMiniAppStyle } from "./style";
+import { typecheckMiniApp, writeMiniAppTsconfig } from "./typecheck";
 
 /**
  * Judge one mini app the way Localix will run it: template leftovers, the house style, the routes,
@@ -30,159 +30,160 @@ import { typecheckMiniApp, writeMiniAppTsconfig } from './typecheck'
  */
 
 export interface CheckStep {
-  title: string
-  ok: boolean
-  problems: string[]
+  title: string;
+  ok: boolean;
+  problems: string[];
   /** An infrastructure error, never excusable as an expected template leftover. */
-  errored?: boolean
+  errored?: boolean;
   /** What Localix will mention but not refuse. */
-  warnings?: string[]
+  warnings?: string[];
 }
 
 export interface CheckReport {
   /** Every step passed. */
-  ok: boolean
+  ok: boolean;
   /** Every step that a package depends on passed. */
-  buildable: boolean
-  steps: CheckStep[]
+  buildable: boolean;
+  steps: CheckStep[];
 }
 
 /** The built outputs of a passing check, in a candidate folder the caller owns. */
 export interface CheckOutputs {
-  dir: string
-  manifest: Record<string, unknown>
+  dir: string;
+  manifest: Record<string, unknown>;
   /** The manifest's `backend` for the package, or null for an app without one. */
-  backend: string | null
-  hasUi: boolean
+  backend: string | null;
+  hasUi: boolean;
 }
 
 export type TestRunner = (input: {
-  miniAppDir: string
-  preload: string
+  miniAppDir: string;
+  preload: string;
   /** Only these test files or folders (`bun test` filters); every test when absent. */
-  filters?: readonly string[]
+  filters?: readonly string[];
 }) => Promise<{
-  ok: boolean
-  output: string
-}>
+  ok: boolean;
+  output: string;
+}>;
 
-export const STORE_MEDIA_STEP = 'store media'
-const TEST_TIMEOUT_MS = 120_000
-const OUTPUT_TAIL_LINES = 60
-const TEST_FILE = /\.test\.tsx?$/u
-export { MANIFEST_FILE }
+export const STORE_MEDIA_STEP = "store media";
+const TEST_TIMEOUT_MS = 120_000;
+const OUTPUT_TAIL_LINES = 60;
+const TEST_FILE = /\.test\.tsx?$/u;
+export { MANIFEST_FILE };
 
 function tail(output: string): string[] {
-  return output.trimEnd().split('\n').slice(-OUTPUT_TAIL_LINES)
+  return output.trimEnd().split("\n").slice(-OUTPUT_TAIL_LINES);
 }
 
 /** `bun test` with the kit's preload serving the host's shared modules. */
 export const runMiniAppTests: TestRunner = async ({ miniAppDir, preload, filters = [] }) => {
-  const run = await runBun(['test', '--preload', preload, ...filters], miniAppDir, TEST_TIMEOUT_MS)
-  return { ok: run.code === 0, output: run.output }
-}
+  const run = await runBun(["test", "--preload", preload, ...filters], miniAppDir, TEST_TIMEOUT_MS);
+  return { ok: run.code === 0, output: run.output };
+};
 
 async function step(title: string, run: () => Promise<string[]>): Promise<CheckStep> {
   try {
-    const problems = await run()
-    return { title, ok: problems.length === 0, problems }
+    const problems = await run();
+    return { title, ok: problems.length === 0, problems };
   } catch (error) {
-    return { title, ok: false, problems: tail(errorMessage(error)), errored: true }
+    return { title, ok: false, problems: tail(errorMessage(error)), errored: true };
   }
 }
 
 async function readManifest(dir: string): Promise<Record<string, unknown>> {
-  const text = await fs.readFile(join(dir, MANIFEST_FILE), 'utf8').catch(() => {
-    throw new Error(`${MANIFEST_FILE} is missing`)
-  })
+  const text = await fs.readFile(join(dir, MANIFEST_FILE), "utf8").catch(() => {
+    throw new Error(`${MANIFEST_FILE} is missing`);
+  });
   try {
-    return JSON.parse(text) as Record<string, unknown>
+    return JSON.parse(text) as Record<string, unknown>;
   } catch (error) {
-    throw new Error(`${MANIFEST_FILE} is not valid JSON: ${(error as Error).message}`)
+    throw new Error(`${MANIFEST_FILE} is not valid JSON: ${(error as Error).message}`);
   }
 }
 
 export async function checkMiniApp(input: {
-  kit: Kit
-  miniAppDir: string
-  runTests?: TestRunner
+  kit: Kit;
+  miniAppDir: string;
+  runTests?: TestRunner;
   /** The untouched reference has residue by design; every other step must still pass. */
-  allowTemplateResidue?: boolean
+  allowTemplateResidue?: boolean;
   /** Keep the built outputs for a package: the caller removes `outputs.dir`. */
-  keepOutputs?: boolean
+  keepOutputs?: boolean;
 }): Promise<{ report: CheckReport; outputs: CheckOutputs | null }> {
-  const { kit, miniAppDir, runTests = runMiniAppTests } = input
-  await assertSafeAuthoringPaths(miniAppDir)
-  const manifest = await readManifest(miniAppDir)
-  const name = typeof manifest.name === 'string' ? manifest.name : ''
-  const candidate = join(miniAppDir, 'dist', `.candidate-${randomUUID()}`)
-  let backend: string | null = null
-  let hasUi = false
+  const { kit, miniAppDir, runTests = runMiniAppTests } = input;
+  await assertSafeAuthoringPaths(miniAppDir);
+  const manifest = await readManifest(miniAppDir);
+  const name = typeof manifest.name === "string" ? manifest.name : "";
+  const candidate = join(miniAppDir, "dist", `.candidate-${randomUUID()}`);
+  let backend: string | null = null;
+  let hasUi = false;
 
   // Tests and type-checking read source, while the builders write only to the candidate. Give
   // tests a complete tsconfig first, then run independent gates together.
-  await writeMiniAppTsconfig(kit, miniAppDir)
-  await writeKitCatalog(kit, miniAppDir)
+  await writeMiniAppTsconfig(kit, miniAppDir);
+  await writeKitCatalog(kit, miniAppDir);
   const steps = await Promise.all([
-    step('template residue', async () =>
+    step("template residue", async () =>
       findTemplateResidue(miniAppDir, name, loadTemplateScaffold(kit.templateDir), kit.templateDir),
     ),
     kit.tools.manifest.validate(miniAppDir).then(
       ({ errors, warnings }): CheckStep => ({
-        title: 'manifest',
+        title: "manifest",
         ok: errors.length === 0,
         problems: errors,
         ...(warnings.length ? { warnings } : {}),
       }),
       (error: unknown): CheckStep => ({
-        title: 'manifest',
+        title: "manifest",
         ok: false,
         problems: tail(errorMessage(error)),
         errored: true,
       }),
     ),
-    step('style', () => checkMiniAppStyle(miniAppDir, kit)),
-    step('routes', () => checkMiniAppRoutes(miniAppDir, kit)),
+    step("style", () => checkMiniAppStyle(miniAppDir, kit)),
+    step("routes", () => checkMiniAppRoutes(miniAppDir, kit)),
     step(STORE_MEDIA_STEP, () => checkMiniAppStoreMedia(kit, miniAppDir, manifest)),
-    step('message context', () => checkMiniAppBindings(miniAppDir)),
-    step('private keys', () => checkMiniAppSecrets(miniAppDir)),
-    step('backend build', async () => {
-      const entry = backendSource(miniAppDir, manifest)
-      if (entry) backend = await buildMiniAppBackend({ kit, miniAppDir, entry, outRoot: candidate })
-      return []
+    step("message context", () => checkMiniAppBindings(miniAppDir)),
+    step("private keys", () => checkMiniAppSecrets(miniAppDir)),
+    step("backend build", async () => {
+      const entry = backendSource(miniAppDir, manifest);
+      if (entry)
+        backend = await buildMiniAppBackend({ kit, miniAppDir, entry, outRoot: candidate });
+      return [];
     }),
-    step('UI build', async () => {
+    step("UI build", async () => {
       hasUi =
         (await buildMiniAppUi({
           kit,
           miniAppDir,
           outDir: join(candidate, kit.tools.ui.artifactDir),
-        })) !== null
-      return []
+        })) !== null;
+      return [];
     }),
-    step('types', () => typecheckMiniApp(kit, miniAppDir)),
-    step('tests', async () => {
-      if (!listFiles(miniAppDir).some((file) => TEST_FILE.test(file))) return []
+    step("types", () => typecheckMiniApp(kit, miniAppDir)),
+    step("tests", async () => {
+      if (!listFiles(miniAppDir).some((file) => TEST_FILE.test(file))) return [];
       const result = await runTests({
         miniAppDir,
         preload: join(kit.dir, kit.manifest.authoring.testPreload),
-      })
-      return result.ok ? [] : tail(result.output)
+      });
+      return result.ok ? [] : tail(result.output);
     }),
-  ])
-  const ok = steps.every((entry) => entry.ok)
+  ]);
+  const ok = steps.every((entry) => entry.ok);
   const buildable = steps.every(
     (entry, index) =>
       entry.ok ||
       entry.title === STORE_MEDIA_STEP ||
       (index === 0 && input.allowTemplateResidue && !entry.errored),
-  )
-  const report = { ok, buildable, steps }
+  );
+  const report = { ok, buildable, steps };
   if (!buildable || !input.keepOutputs) {
-    await fs.rm(candidate, { recursive: true, force: true })
-    return { report, outputs: null }
+    await fs.rm(candidate, { recursive: true, force: true });
+    return { report, outputs: null };
   }
-  return { report, outputs: { dir: candidate, manifest, backend, hasUi } }
+  return { report, outputs: { dir: candidate, manifest, backend, hasUi } };
 }
 
 /** The report as the agent and the person read it. */
@@ -192,27 +193,35 @@ export function formatCheck(
   options: {
     /** An untouched copy: its residue is the whole template domain, which the creation
      *  instruction already lists file by file, so it becomes a count. */
-    freshCopy?: boolean
+    freshCopy?: boolean;
+    /** The template itself (`--template`): its domain names are its own, not leftovers. */
+    template?: boolean;
   } = {},
 ): string {
-  const failed = report.steps.filter((entry) => !entry.ok).length
+  const ownNames = (entry: CheckStep, index: number) =>
+    options.template === true && index === 0 && !entry.ok && !entry.errored;
+  const failed = report.steps.filter((entry, index) => !entry.ok && !ownNames(entry, index)).length;
   const lines = [
-    report.ok
+    failed === 0
       ? `${name}: every check passed.`
       : options.freshCopy && report.buildable
         ? `${name}: builds and passes its tests; only the template domain remains to replace.`
         : `${name}: ${failed} check(s) failed.`,
-  ]
+  ];
   for (const [index, entry] of report.steps.entries()) {
+    if (ownNames(entry, index)) {
+      lines.push(`- ${entry.title}: ok, the template names its own domain`);
+      continue;
+    }
     if (options.freshCopy && index === 0 && !entry.ok && !entry.errored) {
       lines.push(
         `- ${entry.title}: ${entry.problems.length} leftovers, expected on a fresh copy — the domain to replace is listed below`,
-      )
-      continue
+      );
+      continue;
     }
-    lines.push(`- ${entry.title}: ${entry.ok ? 'ok' : 'FAILED'}`)
-    for (const problem of entry.problems) lines.push(`    ${problem}`)
-    for (const warning of entry.warnings ?? []) lines.push(`    warning: ${warning}`)
+    lines.push(`- ${entry.title}: ${entry.ok ? "ok" : "FAILED"}`);
+    for (const problem of entry.problems) lines.push(`    ${problem}`);
+    for (const warning of entry.warnings ?? []) lines.push(`    warning: ${warning}`);
   }
-  return lines.join('\n')
+  return lines.join("\n");
 }
