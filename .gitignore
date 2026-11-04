@@ -9,3 +9,5 @@ mini-apps/*/tsconfig.json
 mini-apps/*/KIT.md
 plugins/mini-app-authoring/template/tsconfig.json
 plugins/mini-app-authoring/template/KIT.md
+plugins/mini-app-authoring/skills/build/examples/*/tsconfig.json
+plugins/mini-app-authoring/skills/build/examples/*/KIT.md

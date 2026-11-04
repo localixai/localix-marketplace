@@ -1,0 +1,24 @@
+{
+  "name": "example-workspace",
+  "displayName": "Example Workspace",
+  "version": "0.1.0",
+  "description": "A worked example of a mini app that lives in the workspace: an editor for .http request files, a tool card, a strip above the composer, a chat action, @-mentions, and buttons that open files and run curl in the terminal.",
+  "author": {
+    "name": "Localix"
+  },
+  "license": "MIT",
+  "apiVersion": 2,
+  "category": "development",
+  "tags": ["example", "workspace", "http", "requests", "terminal"],
+  "icon": "./icon.svg",
+  "surfaces": ["agent", "workbench"],
+  "backend": "./backend/index.ts",
+  "fileAssociations": [
+    {
+      "ext": ["http"],
+      "name": "HTTP requests",
+      "description": "A file of HTTP requests, run with curl from the editor",
+      "role": "Editor"
+    }
+  ]
+}

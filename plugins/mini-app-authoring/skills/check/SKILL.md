@@ -20,8 +20,9 @@ The report lists every step with `ok` or `FAILED`, and each problem on one line 
 `file:line`. Fix every problem, then run the check again; repeat until every step passes. Never
 silence a check by deleting a test or loosening a rule.
 
-- **template residue** names what a copy still carries of the reference app: rename those files and
-  identifiers after what they now hold, and draw the app's own icon with `mini-app icon`.
+- **template residue** names what a copy still carries of the starter: rename its `items`
+  identifiers and tools after this app's own things, rewrite `guide.md`, and draw the app's own icon
+  with `mini-app icon`.
 - **style** names each native `<button>`, `<input>`, `<textarea>` or `<select>`: use the kit's
   control instead. Keep a native one only where the element itself is the control — a board square,
   a row that is clicked as a whole, code typed over its highlighted copy — and say why on its line

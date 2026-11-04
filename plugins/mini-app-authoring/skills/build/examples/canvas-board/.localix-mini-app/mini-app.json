@@ -1,0 +1,16 @@
+{
+  "name": "example-canvas-board",
+  "displayName": "Example Canvas Board",
+  "version": "0.1.0",
+  "description": "A worked example of a whiteboard on the host canvas: notes the person drags and connects, agent tools that add, connect and arrange them, and a tool that pans the open board to what the agent points at.",
+  "author": {
+    "name": "Localix"
+  },
+  "license": "MIT",
+  "apiVersion": 2,
+  "category": "content",
+  "tags": ["canvas", "example", "whiteboard", "notes"],
+  "icon": "./icon.svg",
+  "surfaces": ["agent", "workbench"],
+  "backend": "./backend/index.ts"
+}

@@ -1,0 +1,16 @@
+{
+  "name": "example-board",
+  "displayName": "Example board",
+  "version": "0.1.0",
+  "description": "A kanban board that belongs to one chat: cards in four stages, moved by hand or by the agent, with the open board updating live.",
+  "author": {
+    "name": "Localix"
+  },
+  "license": "MIT",
+  "apiVersion": 2,
+  "category": "utilities",
+  "tags": ["kanban", "board", "example"],
+  "icon": "./icon.svg",
+  "surfaces": ["agent", "workbench"],
+  "backend": "./backend/index.ts"
+}

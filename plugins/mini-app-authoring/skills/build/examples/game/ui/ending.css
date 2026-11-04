@@ -1,0 +1,173 @@
+/* ──────────────────────────────────────────────────────────────────────────────────────────────
+   How a Connect Four game ENDS: the winning line, the chips that lift, the result card, the
+   confetti. Split from `board.css` only to keep each file readable; the same rules hold: colours
+   are mixed from host tokens and every class starts with `example-game-`. The two sides' colours
+   (`--example-game-you`, `--example-game-agent`) are declared on `.example-game-board`.
+   ────────────────────────────────────────────────────────────────────────────────────────────── */
+
+/* ── A game ending ──────────────────────────────────────────────────────────────────────────────
+   The line is drawn across once the last chip is in; the four chips on it lift one after another;
+   everything else steps back, so the end reads at a glance. A draw has no line: the board
+   settles. */
+.example-game-line {
+  fill: none;
+  stroke: var(--example-game-chip);
+  stroke-width: 0.13;
+  stroke-linecap: round;
+  stroke-dasharray: 100;
+  stroke-dashoffset: 0;
+  opacity: 0.95;
+}
+
+.example-game-line[data-by='you'] {
+  --example-game-chip: var(--example-game-you);
+}
+
+.example-game-line[data-by='agent'] {
+  --example-game-chip: var(--example-game-agent);
+}
+
+.example-game-line[data-fresh='true'] {
+  stroke-dashoffset: 100;
+  animation: example-game-draw var(--dur-slow) var(--ease-emphasized) var(--example-game-landed)
+    forwards;
+}
+
+.example-game-chip[data-win='fresh'] {
+  animation: example-game-lift var(--dur-slow) var(--ease-soft)
+    calc(var(--example-game-landed) + var(--example-game-win-order, 0) * var(--dur-instant)) both;
+}
+
+/* The chip that completed the line is still falling when the lift starts: it does both. */
+.example-game-chip[data-fresh='true'][data-win='fresh'] {
+  animation:
+    example-game-drop calc(var(--dur-moderate) + (6 - var(--example-game-row)) * 40ms) linear both,
+    example-game-lift var(--dur-slow) var(--ease-soft) both;
+  animation-delay:
+    calc(var(--example-game-order, 0) * (var(--dur-slow) + 200ms)),
+    calc(var(--example-game-landed) + var(--example-game-win-order, 0) * var(--dur-instant));
+}
+
+.example-game-chip[data-dim='true'] {
+  opacity: 0.3;
+  transition: opacity var(--dur-slow) var(--ease-soft) var(--dur-moderate);
+}
+
+.example-game-board[data-draw='fresh'] {
+  animation: example-game-settle var(--dur-slow) var(--ease-soft) var(--example-game-landed) both;
+}
+
+/* The result card rises once the line is drawn, not before: the end is seen, then read. */
+.example-game-over {
+  animation: example-game-rise var(--dur-moderate) var(--ease-emphasized)
+    calc(var(--example-game-landed) + var(--dur-slow) * 1.6) both;
+}
+
+@keyframes example-game-draw {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+@keyframes example-game-lift {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  45% {
+    transform: scale(1.14);
+    box-shadow: 0 0 0 0.35em color-mix(in oklab, var(--example-game-chip) 38%, transparent);
+  }
+}
+
+@keyframes example-game-settle {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  40% {
+    transform: scale(0.97);
+  }
+}
+
+@keyframes example-game-rise {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.97);
+  }
+}
+
+/* ── A win you made: confetti ───────────────────────────────────────────────────────────────────
+   Pieces fall once from above the board. Each carries its own position, drift, spin and wait in
+   custom properties set by the component (`Confetti.tsx`), so the keyframes stay four lines long
+   and no piece depends on a random number at render time. */
+.example-game-confetti {
+  position: absolute;
+  inset: 0;
+  overflow: visible;
+  pointer-events: none;
+}
+
+.example-game-confetti > i {
+  position: absolute;
+  top: 0;
+  left: var(--example-game-x);
+  width: 0.5rem;
+  height: 0.8rem;
+  border-radius: 0.12rem;
+  background: var(--example-game-piece);
+  opacity: 0;
+  animation: example-game-fall calc(var(--dur-slow) * 4) var(--ease-soft)
+    calc(var(--example-game-landed) + var(--example-game-wait)) forwards;
+}
+
+.example-game-confetti > i:nth-child(5n + 1) {
+  --example-game-piece: var(--example-game-you);
+}
+.example-game-confetti > i:nth-child(5n + 2) {
+  --example-game-piece: var(--example-game-agent);
+}
+.example-game-confetti > i:nth-child(5n + 3) {
+  --example-game-piece: var(--chart-4);
+}
+.example-game-confetti > i:nth-child(5n + 4) {
+  --example-game-piece: var(--chart-7);
+}
+.example-game-confetti > i:nth-child(5n + 5) {
+  --example-game-piece: var(--chart-3);
+}
+
+@keyframes example-game-fall {
+  0% {
+    opacity: 1;
+    transform: translate(0, -2rem) rotate(0deg);
+  }
+  80% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: translate(var(--example-game-drift), 24rem) rotate(var(--example-game-spin));
+  }
+}
+
+/* ── Reduced motion ─────────────────────────────────────────────────────────────────────────────
+   The line is drawn, the card is shown, the losing chips are dimmed: only the travelling goes. */
+@media (prefers-reduced-motion: reduce) {
+  .example-game-chip[data-win='fresh'],
+  .example-game-chip[data-fresh='true'][data-win='fresh'],
+  .example-game-board[data-draw='fresh'],
+  .example-game-over {
+    animation: none;
+  }
+  .example-game-line[data-fresh='true'] {
+    animation: none;
+    stroke-dashoffset: 0;
+  }
+  .example-game-confetti {
+    display: none;
+  }
+  .example-game-chip[data-dim='true'] {
+    transition: none;
+  }
+}

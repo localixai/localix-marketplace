@@ -24,8 +24,8 @@ export interface CliContext {
   /** The running Localix: its release and the mini app contract it implements; null when none runs. */
   runningLocalix?: () => Promise<LocalixRuntime | null>
   runTests?: TestRunner
-  /** The pattern gallery to print from; the plugin's own by default. */
-  patternsDir?: string
+  /** The build skill `mini-app doc` prints from; the plugin's own by default. */
+  skillDir?: string
   localix?: InstallDeps
   installer?: GetLocalixDeps
   /** The environment and home folder the signing key is found by; the process's by default. */

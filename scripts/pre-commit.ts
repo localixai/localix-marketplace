@@ -11,16 +11,21 @@ const staged = Bun.spawnSync(['git', 'diff', '--cached', '--name-only', '--diff-
 const miniApps = [
   ...new Set(staged.flatMap((file) => /^mini-apps\/([^/]+)\//u.exec(file)?.[1] ?? [])),
 ].sort()
-// The template and the pattern gallery are mini apps of the plugin's own: a change to one checks it.
-const GALLERIES = { template: 'plugins/mini-app-authoring/template/', patterns: 'plugins/mini-app-authoring/patterns/' }
-const galleries = Object.entries(GALLERIES)
-  .filter(([, prefix]) => staged.some((file) => file.startsWith(prefix)))
-  .map(([name]) => name)
+// The starter and the build skill's example apps are mini apps of the plugin's own: a change to one
+// checks it (`template`, `examples/<name>`), not the whole plugin.
+const TEMPLATE = 'plugins/mini-app-authoring/template/'
+const EXAMPLES = /^plugins\/mini-app-authoring\/skills\/build\/examples\/([^/]+)\//u
+/** The plugin's own mini app a file belongs to, as `scripts/check.ts` names it, or null. */
+function ownMiniApp(file: string): string | null {
+  if (file.startsWith(TEMPLATE)) return 'template'
+  const example = EXAMPLES.exec(file)?.[1]
+  return example ? `examples/${example}` : null
+}
+const galleries = [...new Set(staged.flatMap((file) => ownMiniApp(file) ?? []))].sort()
 const plugin = staged.some(
   (file) =>
     file.startsWith('scripts/') ||
-    (file.startsWith('plugins/') &&
-      !Object.values(GALLERIES).some((prefix) => file.startsWith(prefix))),
+    (file.startsWith('plugins/') && !ownMiniApp(file)),
 )
 
 const run = (cmd: string[], cwd = ROOT) => {

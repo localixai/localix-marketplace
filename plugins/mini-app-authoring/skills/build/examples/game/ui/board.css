@@ -1,0 +1,197 @@
+/* ──────────────────────────────────────────────────────────────────────────────────────────────
+   Connect Four's look. The board is styled HERE, not with utility classes, for two reasons:
+
+   - Everything drawn over the board (the winning line, the confetti) must line up with its cells
+     at any size, so the layout is one small set of rules that cannot be dropped or out-ranked.
+     Utility classes reach a mini app through the host's de-duplicated sheet; a rule judged a
+     duplicate of the host's can vanish.
+   - The look is a few dozen declarations of colour, shadow and motion that a class string cannot
+     say clearly.
+
+   Colours are MIXED FROM HOST TOKENS (`--foreground`, `--background`, `--chart-N`), never written
+   as hex, so the board follows light and dark and every theme. Every class starts with
+   `example-game-`: a mini app's stylesheet shares the page with the host's and with other apps'.
+   ────────────────────────────────────────────────────────────────────────────────────────────── */
+
+.example-game-board {
+  /* The two sides, and the frame between them. Change a colour here and it changes everywhere. */
+  --example-game-you: var(--chart-8);
+  --example-game-agent: var(--chart-5);
+  --example-game-frame: color-mix(in oklab, var(--chart-7) 52%, var(--background));
+  --example-game-hole: color-mix(in oklab, var(--background) 92%, var(--foreground));
+
+  /* When the last chip has landed. `--example-game-end` is how many chips arrived in one look
+     before the last (set by the board), so a result waits for the move that caused it. */
+  --example-game-landed: calc(
+    var(--example-game-end, 0) * (var(--dur-slow) + 200ms) + var(--dur-slow)
+  );
+
+  position: relative;
+  width: 100%;
+  padding: 2.6%;
+  border: 1px solid color-mix(in oklab, var(--chart-7) 55%, var(--foreground) 14%);
+  border-radius: 1.1rem;
+  background: var(--example-game-frame);
+  box-shadow:
+    inset 0 1px 0 color-mix(in oklab, var(--foreground) 14%, transparent),
+    0 0.9rem 1.8rem -1.1rem color-mix(in oklab, var(--foreground) 55%, transparent);
+  user-select: none;
+}
+
+/* Seven columns of six cells, no gap: a cell is exactly 1/7 by 1/6 of the grid, which is what
+   lets the SVG over it use a 7 × 6 viewBox and land on the middle of any cell. */
+.example-game-grid {
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  aspect-ratio: 7 / 6;
+}
+
+/* A column is ONE hit area: the whole strip drops a chip. Clipped, so a falling chip comes out of
+   the top edge of its column instead of crossing the frame. */
+.example-game-column {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 0.7rem;
+  background: transparent;
+  color: inherit;
+  overflow: hidden;
+  cursor: pointer;
+  transition: background var(--dur-fast) var(--ease-soft);
+}
+
+.example-game-column[aria-disabled='true'] {
+  cursor: default;
+}
+
+@media (hover: hover) {
+  .example-game-column:not([aria-disabled='true']):hover {
+    background: color-mix(in oklab, var(--foreground) 8%, transparent);
+  }
+}
+
+.example-game-column:focus-visible {
+  outline: 2px solid color-mix(in oklab, var(--foreground) 70%, transparent);
+  outline-offset: -2px;
+}
+
+/* A cell: a round hole punched through the frame, so the page shows through it. */
+.example-game-hole {
+  position: relative;
+  flex: 1 1 0;
+  min-height: 0;
+}
+
+.example-game-hole::before {
+  content: '';
+  position: absolute;
+  inset: 7%;
+  border-radius: 50%;
+  background: var(--example-game-hole);
+  box-shadow:
+    inset 0 0.18em 0.4em color-mix(in oklab, var(--foreground) 30%, transparent),
+    0 1px 0 color-mix(in oklab, var(--foreground) 10%, transparent);
+}
+
+/* ── Chips ──────────────────────────────────────────────────────────────────────────────────────
+   A chip is a disc with the ring a real one is pressed with: an outer rim and an inner face. The
+   rim is the chip's colour pulled toward the page, so it reads as an edge in light and dark. */
+.example-game-chip,
+.example-game-ghost {
+  position: absolute;
+  inset: 7%;
+  border-radius: 50%;
+  background: radial-gradient(
+    circle at 50% 50%,
+    var(--example-game-chip) 0 58%,
+    color-mix(in oklab, var(--example-game-chip) 74%, var(--background)) 60% 100%
+  );
+  box-shadow: inset 0 -0.14em 0.22em color-mix(in oklab, var(--background) 40%, transparent);
+}
+
+.example-game-chip[data-by='you'],
+.example-game-ghost {
+  --example-game-chip: var(--example-game-you);
+}
+
+.example-game-chip[data-by='agent'] {
+  --example-game-chip: var(--example-game-agent);
+}
+
+/* The last chip played carries a small dot, so a glance finds the move. */
+.example-game-chip[data-last='true']::after {
+  content: '';
+  position: absolute;
+  inset: 38%;
+  border-radius: 50%;
+  background: color-mix(in oklab, var(--background) 62%, transparent);
+}
+
+/* Where a chip would land: shown on hover and keyboard focus, without implying a move was made. */
+.example-game-ghost {
+  opacity: 0;
+  transition: opacity var(--dur-fast) var(--ease-soft);
+}
+
+@media (hover: hover) {
+  .example-game-column:hover .example-game-ghost {
+    opacity: 0.28;
+  }
+}
+
+.example-game-column:focus-visible .example-game-ghost {
+  opacity: 0.32;
+}
+
+/* ── A chip arriving ────────────────────────────────────────────────────────────────────────────
+   It falls from above its column, lands, and settles with two small rebounds. How far it falls is
+   the row it lands in (`--example-game-row`, 0 at the top), so a high chip falls less and takes
+   less time. Chips that arrived in one look (the person's, then the agent's) wait their turn by
+   `--example-game-order`, so they read as two moves. */
+.example-game-chip[data-fresh='true'] {
+  animation: example-game-drop calc(var(--dur-moderate) + (6 - var(--example-game-row)) * 40ms)
+    linear both;
+  animation-delay: calc(var(--example-game-order, 0) * (var(--dur-slow) + 200ms));
+}
+
+@keyframes example-game-drop {
+  0% {
+    transform: translateY(calc((var(--example-game-row) + 1.4) * -118%));
+    animation-timing-function: cubic-bezier(0.55, 0, 1, 0.45);
+  }
+  58% {
+    transform: translateY(0);
+    animation-timing-function: cubic-bezier(0, 0.55, 0.45, 1);
+  }
+  74% {
+    transform: translateY(-12%);
+    animation-timing-function: cubic-bezier(0.55, 0, 1, 0.45);
+  }
+  88% {
+    transform: translateY(0);
+    animation-timing-function: cubic-bezier(0, 0.55, 0.45, 1);
+  }
+  94% {
+    transform: translateY(-3%);
+    animation-timing-function: cubic-bezier(0.55, 0, 1, 0.45);
+  }
+  100% {
+    transform: translateY(0);
+  }
+}
+
+/* ── Reduced motion ─────────────────────────────────────────────────────────────────────────────
+   Everything still ENDS where it would have: the chips are in their cells. Only the travelling
+   goes. The ending's own block is in `ending.css`. */
+@media (prefers-reduced-motion: reduce) {
+  .example-game-chip[data-fresh='true'] {
+    animation: none;
+  }
+  .example-game-column,
+  .example-game-ghost {
+    transition: none;
+  }
+}

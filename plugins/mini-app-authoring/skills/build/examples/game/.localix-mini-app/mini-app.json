@@ -1,0 +1,16 @@
+{
+  "name": "example-game",
+  "displayName": "Example Game",
+  "version": "0.1.0",
+  "description": "A worked example of a turn-based game in the chat: Connect Four against the agent, or a decision model, with a board that animates drops, a winning line and a celebration.",
+  "author": {
+    "name": "Localix"
+  },
+  "license": "MIT",
+  "apiVersion": 2,
+  "category": "games",
+  "tags": ["game", "example", "connect-four", "turn-based"],
+  "icon": "./icon.svg",
+  "surfaces": ["agent", "workbench"],
+  "backend": "./backend/index.ts"
+}

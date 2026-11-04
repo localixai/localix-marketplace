@@ -1,0 +1,16 @@
+{
+  "name": "example-tracker",
+  "displayName": "Example Tracker",
+  "version": "0.1.0",
+  "description": "A job search tracker: companies and the applications made to them, kept by hand or from the chat. A worked example of a list app with a list, a table and a detail pane.",
+  "author": {
+    "name": "Localix"
+  },
+  "license": "MIT",
+  "apiVersion": 2,
+  "category": "utilities",
+  "tags": ["tracker", "jobs", "example"],
+  "icon": "./icon.svg",
+  "surfaces": ["agent", "workbench"],
+  "backend": "./backend/index.ts"
+}

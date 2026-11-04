@@ -7,8 +7,11 @@ import { MANIFEST_FILE } from '../lib/manifest-file'
 
 /** The reference mini app every scaffold forks: this plugin's `template/`. */
 export const PLUGIN_TEMPLATE = resolve(import.meta.dir, '../../template')
-/** The gallery of working screens `mini-app pattern` prints: a mini app checked like the template. */
-export const PLUGIN_PATTERNS = resolve(import.meta.dir, '../../patterns')
+/** The mini app API that first has the app layer (`createMiniApp`, collections, `screenUi`) the plugin teaches. */
+export const APP_LAYER_API_VERSION = 2
+
+/** The build skill `mini-app doc` prints: its SKILL.md, its references and its example apps. */
+export const PLUGIN_BUILD_SKILL = resolve(import.meta.dir, '../../skills/build')
 
 /**
  * The MINI APP KIT: the platform a Localix release publishes for mini app authors, and the only

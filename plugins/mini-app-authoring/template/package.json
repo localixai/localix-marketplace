@@ -1,0 +1,6 @@
+{
+  "name": "template",
+  "private": true,
+  "type": "module",
+  "dependencies": {}
+}

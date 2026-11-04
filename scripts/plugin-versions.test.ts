@@ -12,7 +12,7 @@ describe('a change to a plugin in this marketplace', () => {
   // Localix, like Claude Code, updates an installed plugin only when its version moves:
   // 67aa4252 changed mini-app-authoring at 0.8.0 and no install ever received it.
   test('is refused when the plugin keeps its version', () => {
-    const changed = ['plugins/mini-app-authoring/patterns/board/ui/Board.tsx']
+    const changed = ['plugins/mini-app-authoring/skills/build/examples/board/ui/App.tsx']
     expect(
       unbumpedPlugins(changed, versions({ 'mini-app-authoring': ['0.8.0', '0.8.0'] })),
     ).toEqual([{ plugin: 'mini-app-authoring', before: '0.8.0', after: '0.8.0' }])

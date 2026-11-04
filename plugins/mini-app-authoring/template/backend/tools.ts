@@ -1,106 +1,98 @@
 import type { Collection, MiniAppContext } from '@localixai/mini-app-sdk/backend'
-import {
-  describeForAgent,
-  logEntryInputSchema,
-  summarize,
-  type Entry,
-  type Settings,
-} from '../shared/model'
-import type { logEntriesSpec } from './entries'
+import { describeForAgent, itemInputSchema, type Item } from '../shared/model'
+import type { itemsSpec } from './items'
 
-type Entries = Collection<Entry, (typeof logEntriesSpec)['input']['shape']>
+type Items = Collection<Item, (typeof itemsSpec)['input']['shape']>
 
 /**
- * The agent's tools. The agent does the understanding — it reads the photo, the message, the
- * receipt — and calls these with structured input; the tools validate, store and answer with what
- * changed and where things stand, so the agent can tell the person in one sentence.
+ * The agent's tools. The agent does the understanding — it reads the message, the photo, the file —
+ * and calls these with structured input; the tools validate, store and answer with what changed and
+ * where things stand, so the agent can tell the person in one sentence.
  *
  * Rules every tool here keeps:
  * - `mutates` and `classify` say what it changes: `host` for the app's own data.
  * - `executionMode: 'sequential'` for a tool that writes; reads may run in parallel.
  * - `isError: true` only for a call that did nothing because the input was wrong.
  */
-export function createTools(ctx: MiniAppContext, entries: Entries, settings: Settings) {
+export function createTools(ctx: MiniAppContext, items: Items) {
   const { z } = ctx
-  const summary = async () =>
-    describeForAgent(summarize(await entries.list(), new Date(), settings))
-  const { unit } = settings
+  const list = async () => describeForAgent(await items.list())
+  const write = {
+    executionMode: 'sequential',
+    mutates: true,
+    classify: () => ({ effect: 'host' as const }),
+    permissionPaths: () => [],
+  } as const
+  const read = { executionMode: 'parallel', mutates: false, permissionPaths: () => [] } as const
+  const notFound = {
+    content: 'No item has that id. Read template_list_items for the ids.',
+    isError: true,
+  }
   return [
     ctx.defineTool({
-      name: 'template_log_entry',
-      label: 'Log an entry',
-      activeVerb: 'Logging',
-      description: `Log one entry in Daily Log: a title, an amount in ${unit}, a category and an optional note and time. Answers with today's totals.`,
-      // The shared schema with descriptions added: the agent is shown the limits the log keeps.
-      inputSchema: logEntryInputSchema.extend({
-        title: logEntryInputSchema.shape.title.describe('What it was, in a few words.'),
-        amount: logEntryInputSchema.shape.amount.describe(`How much, in ${unit}.`),
+      ...write,
+      name: 'template_add_item',
+      label: 'Add an item',
+      activeVerb: 'Adding',
+      description: 'Add one item: a title and an optional note. Answers with the whole list.',
+      // The shared schema with descriptions added: the agent is shown the limits the list keeps.
+      inputSchema: itemInputSchema.extend({
+        title: itemInputSchema.shape.title.describe('What it is, in a few words.'),
       }),
-      executionMode: 'sequential',
-      mutates: true,
-      classify: () => ({ effect: 'host' }),
-      permissionPaths: () => [],
       async execute(_toolCallId, input) {
-        const entry = await entries.add(input)
-        return { content: `Logged ${entry.title}: ${entry.amount} ${unit}.\n${await summary()}` }
+        const item = await items.add(input)
+        return { content: `Added "${item.title}".\n${await list()}` }
       },
     }),
     ctx.defineTool({
-      name: 'template_summary',
-      label: 'Daily Log summary',
-      activeVerb: 'Reading Daily Log',
-      description:
-        "Read Daily Log: today's total against the goal, today's entries with their ids, and the last seven days.",
+      ...read,
+      name: 'template_list_items',
+      label: 'List items',
+      activeVerb: 'Reading the list',
+      description: 'Read every item with its id, open ones first.',
       inputSchema: z.object({}),
-      executionMode: 'parallel',
-      mutates: false,
-      permissionPaths: () => [],
       async execute() {
-        return { content: await summary() }
+        return { content: await list() }
       },
     }),
     ctx.defineTool({
-      name: 'template_find_entries',
-      label: 'Find entries',
-      activeVerb: 'Searching Daily Log',
+      ...write,
+      name: 'template_update_item',
+      label: 'Change an item',
+      activeVerb: 'Changing',
       description:
-        'Find past entries by meaning ("something sweet last week"). Empty while the embedding model is not ready: then read the summary instead.',
-      inputSchema: z.object({ query: z.string().min(1).describe('What to look for.') }),
-      executionMode: 'parallel',
-      mutates: false,
-      permissionPaths: () => [],
-      async execute(_toolCallId, { query }) {
-        const found = await entries.search(query, { limit: 10 })
-        if (!found.length)
-          return { content: 'No entries match by meaning (or search is not ready).' }
-        return {
-          content: found
-            .map(
-              (entry) => `- ${entry.at}: ${entry.title}, ${entry.amount} ${unit} (id ${entry.id})`,
-            )
-            .join('\n'),
-        }
+        'Change one item by its id: its title, its note, or whether it is done. Fields left out stay as they are.',
+      inputSchema: itemInputSchema.partial().extend({ id: z.string().min(1) }),
+      async execute(_toolCallId, { id, ...change }) {
+        const item = await items.update(id, change)
+        if (!item) return notFound
+        return { content: `Changed "${item.title}".\n${await list()}` }
       },
     }),
     ctx.defineTool({
-      name: 'template_remove_entry',
-      label: 'Remove an entry',
+      ...write,
+      name: 'template_remove_item',
+      label: 'Remove an item',
       activeVerb: 'Removing',
-      description:
-        'Remove one entry by its id (the summary lists ids). Answers with today’s totals.',
+      description: 'Remove one item by its id. Answers with the whole list.',
       inputSchema: z.object({ id: z.string().min(1) }),
-      executionMode: 'sequential',
-      mutates: true,
-      classify: () => ({ effect: 'host' }),
-      permissionPaths: () => [],
       async execute(_toolCallId, { id }) {
-        if (!(await entries.remove(id))) {
-          return {
-            content: `No entry has that id. Read template_summary for today's ids.`,
-            isError: true,
-          }
-        }
-        return { content: `Removed it.\n${await summary()}` }
+        if (!(await items.remove(id))) return notFound
+        return { content: `Removed it.\n${await list()}` }
+      },
+    }),
+    ctx.defineTool({
+      ...read,
+      name: 'template_find_items',
+      label: 'Find items',
+      activeVerb: 'Searching the list',
+      description:
+        'Find items by meaning ("the one about the dentist"). Empty while the embedding model is not ready: then list the items instead.',
+      inputSchema: z.object({ query: z.string().min(1).describe('What to look for.') }),
+      async execute(_toolCallId, { query }) {
+        const found = await items.search(query, { limit: 10 })
+        if (!found.length) return { content: 'Nothing matches by meaning (or search is not ready).' }
+        return { content: found.map((item) => `- ${item.title} (id ${item.id})`).join('\n') }
       },
     }),
   ]

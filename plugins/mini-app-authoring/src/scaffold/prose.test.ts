@@ -3,7 +3,7 @@ import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 
-import { PLUGIN_PATTERNS, PLUGIN_TEMPLATE } from '../kit/kit'
+import { PLUGIN_BUILD_SKILL, PLUGIN_TEMPLATE } from '../kit/kit'
 import { fakeKit } from '../testing/fake-kit'
 import { agentInstruction, agentsMd, readme } from './prose'
 import { listFiles, loadTemplateScaffold } from './template-layout'
@@ -55,16 +55,16 @@ describe('what a new mini app is told', () => {
     expect(agentsMd({ ...app, kit, scaffold })).toContain('mini-app api ')
   })
 
-  test('every pattern it names is one the gallery prints', () => {
-    const named = [...instruction.matchAll(/`mini-app pattern ([a-z-]+)`/gu)].map((match) => match[1]!)
-    expect(named.length).toBeGreaterThan(5)
-    const shipped = new Set([
-      ...listFiles(join(PLUGIN_PATTERNS, 'ui', 'patterns'))
-        .filter((file) => !/\.test\.tsx?$/u.test(file))
-        .map((file) => file.replace(/\.tsx?$/u, '')),
-      'format',
-    ])
-    expect(named.filter((name) => !shipped.has(name))).toEqual([])
+  // Inside Localix the agent may only run `mini-app`: everything it is pointed at must print there.
+  test('points to the build skill by the command that prints it, in the app and in later sessions', () => {
+    expect(instruction).toContain('`mini-app doc`')
+    expect(agentsMd({ ...app, kit, scaffold })).toContain('`mini-app doc`')
+    for (const [, example] of agentsMd({ ...app, kit, scaffold }).matchAll(/`mini-app doc ([a-z-]+)`/gu)) {
+      const named = listFiles(PLUGIN_BUILD_SKILL).some(
+        (file) => file === `references/${example}.md` || file.startsWith(`examples/${example}/`),
+      )
+      expect(`${example}: ${named}`).toBe(`${example}: true`)
+    }
   })
 
   test('says how to run one test file alone', () => {

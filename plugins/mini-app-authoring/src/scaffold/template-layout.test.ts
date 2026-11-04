@@ -64,3 +64,11 @@ test("reports the template's own icon, kept unchanged, and passes a drawn one", 
   const drawn = templateAndCopy({ 'icon.svg': ICON.replace('M1 1', 'M2 2') })
   expect(findTemplateResidue(drawn.app, 'meal-log', scaffold, drawn.template)).toEqual([])
 })
+
+test('a template whose files carry no domain name asks the copy to rename none of them', () => {
+  const { template, app } = templateAndCopy({ 'backend/tools.ts': 'export {}\n' })
+  const generic = { ...scaffold, domain: ['backend/tools.ts'], domainNamedPaths: [] }
+  expect(findTemplateResidue(app, 'meal-log', generic, template)).not.toContainEqual(
+    expect.stringContaining('keeps its'),
+  )
+})

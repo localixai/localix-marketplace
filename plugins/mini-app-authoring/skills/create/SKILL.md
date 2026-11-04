@@ -27,16 +27,19 @@ The request: $ARGUMENTS
    mini-app create <name> --title "<Title>" --description "<what it does>"
    ```
 
-   `--dir <folder>` puts it elsewhere: that folder becomes the app's own folder. The command copies the reference mini app (Daily Log:
-   entries the agent logs, a goal, a chart), installs the mini app kit of the person's Localix into
-   its `node_modules`, checks the copy, and prints the instruction for turning it into the requested
-   app, with the whole SDK contract.
+   `--dir <folder>` puts it elsewhere: that folder becomes the app's own folder. The command copies
+   the starter (one collection of items, agent tools for it, a list screen with its states, and tests
+   for both), renames it for the app, installs the mini app kit of the person's Localix into its
+   `node_modules`, checks the copy, and prints the instruction for turning it into the requested app.
 
-3. Follow that printed instruction in its order: read the patterns, decide the data and the screen,
-   write `shared/model.ts` first, then the rest in one batch, test, draw the icon with
-   `mini-app icon`, then `mini-app check <folder>` until every check passes (`mini-app test <folder>
-   <file>` reruns one failing test file). After each edit this
-   plugin's hook reports what in that file breaks Localix's rules: fix it right away.
+3. Follow that printed instruction in its order. It starts with `mini-app doc`, the
+   `mini-app-authoring:build` skill: the order of work, and for each kind of app the reference to
+   read and the working example to copy from (a tracker, a board per chat, a dashboard, a canvas
+   board, a game with its own look, an app that joins Localix's file editors and composer). Decide
+   the data and the screens, write `shared/model.ts` first, then the rest in one batch, test, draw
+   the icon, then `mini-app check <folder>` until every check passes (`mini-app test <folder> <file>`
+   reruns one failing test file). After each edit this plugin's hook reports what in that file breaks
+   Localix's rules: fix it right away.
 4. Install it with `mini-app install <folder>`. When Localix is not installed, run
    `mini-app build <folder>` instead and say that `/mini-app-authoring:get-localix` installs
    Localix, after which `mini-app install <folder>` puts the app in.
@@ -58,9 +61,9 @@ The request: $ARGUMENTS
   read `AGENTS.md` now (it repeats that message for later sessions), search `KIT.md` for the module
   that does a job rather than reading it whole, and read that module's props with
   `mini-app api <module>`. Never search the disk for SDK or kit sources: `mini-app api` prints them.
-- Build each screen from a working one: `mini-app pattern` lists the gallery (page frame, board,
-  master-detail, data table, form dialog, dashboard, states, formatting) and `mini-app pattern <name>`
-  prints one with its test. Copy it, rename the domain, keep its layout, states and formatting.
+- Build each screen from the closest example: `mini-app doc <example>` lists its files and
+  `mini-app doc <example>/<file>` prints one. Copy it, rename the domain, keep its layout, states and
+  formatting.
 - A mini app's backend runs unsandboxed inside Localix, and an installed one starts enabled: keep
   each tool honest about what it changes.
 - Never edit `dist/`, `tsconfig.json` or `KIT.md`: the checks rewrite them.

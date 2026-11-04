@@ -1,4 +1,4 @@
-import { promises as fs } from 'node:fs'
+import { existsSync, promises as fs } from 'node:fs'
 import { join, relative, resolve } from 'node:path'
 
 import { checkMiniApp, formatCheck, MANIFEST_FILE } from '../check/check'
@@ -9,21 +9,15 @@ import { assemblePackage } from '../package/assemble'
 import { packIntoMarketplace } from '../package/pack'
 import { formatVerdict, validatePackage } from '../package/validate'
 import { WORKFLOW_FILE, writeReleaseSetup } from '../publish/ci'
-import {
-  AGENT_PARTNERSHIP,
-  APP_LAYER,
-  APP_LAYER_API_VERSION,
-  BEYOND_COLLECTIONS,
-  DESIGN_BRIEF,
-  LARGER_APPS,
-} from '../scaffold/contract'
 import { drawIcon } from '../scaffold/icon'
+import { isLucideName, lucideGlyph } from '../scaffold/lucide'
 import { agentInstruction } from '../scaffold/prose'
+import { APP_LAYER_API_VERSION } from '../kit/kit'
 import { MINI_APP_NAME_RE, scaffoldMiniApp, toMiniAppName } from '../scaffold/scaffold'
 import { stringOption } from './args'
 import { type CliContext, type Command, folder, readManifest } from './context'
 import { apiCommand } from './api-command'
-import { patternCommand } from './pattern-command'
+import { docCommand } from './doc-command'
 import { kitInfo, sayContractDiffers } from './kit-command'
 import { testCommand } from './test-command'
 import { buildPackage } from './build-package'
@@ -155,12 +149,14 @@ const icon: Command = async (args, context) => {
   const glyph = stringOption(args, 'glyph')
   if (!glyph) {
     throw new UserError(
-      'Give the glyph: mini-app icon [folder] --glyph \'<path d="…"/>\' (or a 24×24 .svg file).',
+      'Give the glyph: mini-app icon [folder] --glyph <lucide-name> (house, chart-column), or \'<path d="…"/>\', or a 24×24 .svg file.',
     )
   }
   const markup = glyph.trimStart().startsWith('<')
     ? glyph
-    : await fs.readFile(resolve(context.cwd, glyph), 'utf8').catch(() => {
+    : isLucideName(glyph) && !existsSync(resolve(context.cwd, glyph))
+      ? await lucideGlyph((await context.kit(dir)).kit.dir, glyph)
+      : await fs.readFile(resolve(context.cwd, glyph), 'utf8').catch(() => {
         throw new UserError(`Cannot read the glyph file ${glyph}.`)
       })
   const named = typeof manifest.icon === 'string' && manifest.icon.endsWith('.svg')
@@ -208,14 +204,6 @@ const ci: Command = async (args, context) => {
   return 0
 }
 
-/** The contract `create` prints, any time: what a skill injects and an agent re-reads. */
-const contract: Command = async (_args, context) => {
-  context.out(
-    [AGENT_PARTNERSHIP, APP_LAYER, BEYOND_COLLECTIONS, LARGER_APPS, DESIGN_BRIEF].join('\n\n'),
-  )
-  return 0
-}
-
 const getLocalixCommand: Command = async (_args, context) => {
   const got = await getLocalix(context.installer)
   context.out(
@@ -232,18 +220,17 @@ export const HELP = `mini-app — create, check, build, install and share Locali
   mini-app check [folder] [--json] [--template]   every gate Localix applies, in one report
   mini-app test [folder] [files…]        run the app's tests alone, as check runs them
   mini-app api [module [export] | word]  the kit's API: a module's exports with their types, or names found
-  mini-app pattern [name]                working screens to copy: page frame, board, master-detail, table, form dialog, dashboard, states
+  mini-app doc [topic|example[/file]]   how to build an app: the build skill, a reference, or a working example
   mini-app build [folder]                check, then write the package to <folder>/dist/package
   mini-app install [folder]              build, then install into the running Localix
   mini-app pack [folder] [--out <dir>] [--publisher "…"]   add the app to a releasable marketplace
   mini-app validate <package folder | .tar.gz> [--json]
-  mini-app icon [folder] --glyph '<path …/>' [--tint #hex]   draw the app's icon from a 24×24 glyph
+  mini-app icon [folder] --glyph <lucide-name | '<path …/>' | file.svg> [--tint #hex]   draw the app's icon
   mini-app marketplace validate [file] [--fetch] [--curation]   check a .localix-mini-app/marketplace.json
   mini-app marketplace build [file] [--out <dir>] [--curation]   pack its folders' apps into a release with its links
   mini-app ci [folder] [--publisher "…"] [--repository <owner>/<repo>]   release it from GitHub: a workflow that checks and releases tags
   mini-app keygen                        make your signing key, once (kept in ~/.config/localix)
   mini-app sign [folder] [--next-key <key>]   sign a packed marketplace: MINI_APP_SIGNING_KEY, else your key
-  mini-app contract                      the SDK contract a mini app is written against
   mini-app kit [folder] [--update [--version <v>|latest]]   the kit the app builds with; --update installs a release's
   mini-app get-localix                   install the latest Localix (verified) and open it
 
@@ -256,7 +243,7 @@ export const COMMANDS: Record<string, Command> = {
   check,
   test: testCommand,
   api: apiCommand,
-  pattern: patternCommand,
+  doc: docCommand,
   build,
   install,
   pack,
@@ -265,7 +252,6 @@ export const COMMANDS: Record<string, Command> = {
   ci,
   keygen,
   sign: signCommand,
-  contract,
   kit: kitInfo,
   'get-localix': getLocalixCommand,
   marketplace: marketplaceCommand,

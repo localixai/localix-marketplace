@@ -1,7 +1,7 @@
 {
-  "$comment": "What a copy of this mini app is made of. Read by the mini-app-authoring plugin: the scaffold, the residue check and the skills. The plumbing lives in the SDK (createMiniApp, defineCollection, useCollection, screenUi), so a copy is entries and domain only. Placeholders: {name} lower-kebab, {snake} lower_snake, {displayName}.",
-  "summary": "Daily Log reference mini app (entries the agent logs from what the person says or shows, a daily goal from Settings, a screen with today's total, a 7-day chart and a quick-add form)",
-  "domainName": "Daily Log",
+  "$comment": "What a copy of the starter is made of. Read by the mini-app-authoring plugin: the scaffold, the residue check and the create skill. The plumbing lives in the SDK (createMiniApp, defineCollection, useCollection, screenUi), so a copy is entries and domain only. Placeholders: {name} lower-kebab, {snake} lower_snake, {displayName}.",
+  "summary": "Starter mini app: one collection of items the agent and the screen share, five agent tools, a screen with a header, an add form, a list and its empty state, and tests for both sides",
+  "domainName": "Starter",
   "entry": [
     ".localix-mini-app/mini-app.json",
     "guide.md",
@@ -12,63 +12,37 @@
   "domain": [
     "shared/model.ts",
     "shared/model.test.ts",
-    "backend/entries.ts",
-    "backend/settings.ts",
+    "backend/items.ts",
     "backend/tools.ts",
     "backend/index.test.ts",
     "ui/App.tsx",
-    "ui/parts/"
+    "ui/App.dom.test.tsx"
   ],
   "patterns": [
     {
-      "use": "the data the agent and the screen share: a collection with its schema, how an item is made and what search reads",
-      "file": "backend/entries.ts",
+      "use": "the model both sides share: schemas without defaults, and what the agent is told",
+      "file": "shared/model.ts",
+      "anchor": "describeForAgent"
+    },
+    {
+      "use": "the data: a collection, how an item is made and what search reads",
+      "file": "backend/items.ts",
       "anchor": "defineCollection"
     },
     {
-      "use": "the backend's whole wiring: collections, extra routes and tools",
+      "use": "the backend's wiring: collections, routes and tools",
       "file": "backend/index.ts",
       "anchor": "createMiniApp"
     },
     {
-      "use": "agent tools that write, read and search, each answering with where things stand",
+      "use": "agent tools that add, read, change, remove and search, each answering with where things stand",
       "file": "backend/tools.ts",
       "anchor": "ctx.defineTool"
     },
     {
-      "use": "settings the person changes (mini-app.json config) and an extra route",
-      "file": "backend/settings.ts",
-      "anchor": "readSettings"
-    },
-    {
-      "use": "logic both sides share: the summary the screen shows and the agent is told",
-      "file": "shared/model.ts",
-      "anchor": "summarize"
-    },
-    {
-      "use": "the screen: a collection, a settings route, the agent context, a problem line",
+      "use": "the screen: header, problem line, loading and empty states, a form and a list on one collection",
       "file": "ui/App.tsx",
       "anchor": "useCollection"
-    },
-    {
-      "use": "a hero number in a progress ring, with bars per category",
-      "file": "ui/parts/Today.tsx",
-      "anchor": "ContextRing"
-    },
-    {
-      "use": "a chart of the last days",
-      "file": "ui/parts/Week.tsx",
-      "anchor": "TrendChart"
-    },
-    {
-      "use": "a list with remove, and an empty state that points to the chat",
-      "file": "ui/parts/LogEntryList.tsx",
-      "anchor": "StateNotice"
-    },
-    {
-      "use": "a form that adds through the collection and clears once stored",
-      "file": "ui/parts/QuickAdd.tsx",
-      "anchor": "onAdd"
     },
     {
       "use": "the tab, its launcher and what the agent is told while it is open",
@@ -76,26 +50,28 @@
       "anchor": "screenUi"
     },
     {
-      "use": "tests: the agent's tools and the screen's routes on one store",
+      "use": "backend tests: the agent's tools and the screen's routes on one store",
       "file": "backend/index.test.ts",
       "anchor": "callTool"
+    },
+    {
+      "use": "screen tests: what the person does, what they see and what the backend was asked",
+      "file": "ui/App.dom.test.tsx",
+      "anchor": "requestSubmit"
     }
   ],
   "authoringOnly": [],
-  "replaceMedia": [
-    "icon.svg"
-  ],
-  "domainNamedPaths": [
-    "entr"
-  ],
+  "replaceMedia": ["icon.svg"],
+  "domainNamedPaths": [],
   "domainTokens": [
-    "logEntrySchema",
-    "logEntryInputSchema",
-    "logEntriesSpec",
-    "LogEntryList",
-    "{snake}_log_entry",
-    "{snake}_find_entries",
-    "{snake}_remove_entry"
+    "itemSchema",
+    "itemInputSchema",
+    "itemsSpec",
+    "{snake}_add_item",
+    "{snake}_list_items",
+    "{snake}_update_item",
+    "{snake}_remove_item",
+    "{snake}_find_items"
   ],
   "renames": [
     {
@@ -103,15 +79,16 @@
       "replacement": "{snake}_"
     },
     {
-      "pattern": "Daily Log",
+      "pattern": "Starter",
       "replacement": "{displayName}"
     }
   ],
   "directoryRenames": [],
   "tools": [
-    "{snake}_log_entry",
-    "{snake}_summary",
-    "{snake}_find_entries",
-    "{snake}_remove_entry"
+    "{snake}_add_item",
+    "{snake}_list_items",
+    "{snake}_update_item",
+    "{snake}_remove_item",
+    "{snake}_find_items"
   ]
 }

@@ -1,4 +1,5 @@
-import { useMemo } from 'react'
+import { useMemo, useState, type FormEvent } from 'react'
+import { ListTodo, Plus, Trash2 } from 'lucide-react'
 import {
   useAgentContext,
   useCollection,
@@ -6,88 +7,151 @@ import {
   type ScreenProps,
 } from '@localixai/mini-app-sdk/ui/app'
 import { ProblemLine } from '@localixai/mini-app-sdk/ui/components'
-import { useNow } from '@localixai/mini-app-sdk/ui/now'
-import { usePolledSnapshot } from '@localixai/mini-app-sdk/ui/route-snapshot'
+import { Button } from '@localixai/kit/button'
+import { Checkbox } from '@localixai/kit/checkbox'
 import { LoadingHint } from '@localixai/kit/empty-hint'
+import { IconButton } from '@localixai/kit/icon-button'
+import { Input } from '@localixai/kit/input'
+import { PanelHeader } from '@localixai/kit/panel-header'
+import { StateNotice } from '@localixai/kit/state-notice'
 import {
   APP,
-  DEFAULT_SETTINGS,
-  ENTRIES,
+  ITEMS,
+  countOf,
   describeForAgent,
-  logEntrySchema,
-  settingsSchema,
-  summarize,
-  type EntryInput,
+  itemSchema,
+  sortItems,
+  type Item,
+  type ItemInput,
 } from '../shared/model'
-import { LogEntryList } from './parts/LogEntryList'
-import { QuickAdd } from './parts/QuickAdd'
-import { Today } from './parts/Today'
-import { Week } from './parts/Week'
 
 /**
- * The screen. It reads the collection and the settings, computes the summary with the same
- * `summarize` the agent's tools use, and tells the agent exactly what it shows. Every number on
- * screen comes from that one summary, so the agent and the person always see the same thing.
+ * The screen. It reads the collection, tells the agent exactly what it shows, and writes through
+ * the same collection the agent's tools use — so a change from either side shows on the other at
+ * once. Replace the list with what your app shows; keep the pieces every screen needs: the header,
+ * the problem line, the loading and empty states, and the agent context.
  */
 export function App({ active, publishMessageContext }: ScreenProps) {
-  const entries = useCollection<(typeof logEntrySchema)['_output'], EntryInput>({
-    app: APP,
-    name: ENTRIES,
-    item: logEntrySchema,
-    active,
-  })
-  const settings = usePolledSnapshot({
-    path: `/rpc/${APP}/settings`,
-    schema: settingsSchema,
-    intervalMs: null,
-    active,
-    failureMessage: 'Cannot read the settings.',
-  })
-  // Re-render each minute, so "today" turns over at midnight with the screen open.
-  const now = useNow(60_000, active)
-  const summary = useMemo(
-    () => summarize(entries.items, new Date(now), settings.snapshot ?? DEFAULT_SETTINGS),
-    [entries.items, now, settings.snapshot],
-  )
+  const items = useCollection<Item, ItemInput>({ app: APP, name: ITEMS, item: itemSchema, active })
+  const sorted = useMemo(() => sortItems(items.items), [items.items])
+  const open = sorted.filter((item) => !item.done).length
   useAgentContext(
     publishMessageContext,
-    active && !entries.loading,
-    useMemo(() => ({ label: 'Daily Log', content: describeForAgent(summary) }), [summary]),
+    active && !items.loading,
+    useMemo(() => ({ label: 'Starter', content: describeForAgent(items.items) }), [items.items]),
   )
   const problem = useScreenProblem({
     app: APP,
-    subject: 'Daily Log',
-    failure: entries.error,
-    showingData: entries.items.length > 0,
+    subject: 'Starter',
+    failure: items.error,
+    showingData: items.items.length > 0,
   })
 
   return (
-    // The screen scrolls on one axis and reflows to its own width (it may sit in a narrow pane).
-    <div className="@container h-full min-h-0 overflow-y-auto">
-      <div className="flex flex-col gap-6 px-4 py-5 @2xl:px-6">
-        <header>
-          <h1 className="text-base font-semibold text-foreground">Daily Log</h1>
-          <p className="mt-0.5 text-xs text-text-faint">
-            Log from the chat — a sentence, a photo, a receipt — or add one below.
-          </p>
-        </header>
-        {problem && <ProblemLine {...problem} />}
-        {entries.loading ? (
-          <LoadingHint>Opening Daily Log…</LoadingHint>
-        ) : (
-          <>
-            <Today summary={summary} />
-            <QuickAdd unit={summary.settings.unit} sending={entries.sending} onAdd={entries.add} />
-            <LogEntryList
-              entries={summary.todayEntries}
-              unit={summary.settings.unit}
-              disabled={entries.sending}
-              onRemove={(id) => void entries.remove(id)}
+    // The fill chain: the header stays, the body scrolls, and the layout reflows to its own width
+    // (the screen may sit in a narrow pane).
+    <div className="@container flex h-full min-h-0 flex-col">
+      <PanelHeader
+        tone="content"
+        title="Starter"
+        summary={items.loading ? 'Loading…' : `${countOf(sorted.length, 'item')} · ${open} open`}
+      />
+      {problem && <ProblemLine {...problem} />}
+      <div className="min-h-0 flex-1 overflow-y-auto">
+        <div className="flex flex-col gap-4 px-4 py-4 @2xl:px-6">
+          <AddForm sending={items.sending} onAdd={items.add} />
+          {items.loading ? (
+            <LoadingHint>Opening the list…</LoadingHint>
+          ) : sorted.length === 0 ? (
+            <StateNotice
+              icon={ListTodo}
+              title="Nothing here yet"
+              body="Add an item above, or ask in the chat: “add buy milk and call the dentist”."
             />
-            <Week summary={summary} />
-          </>
-        )}
+          ) : (
+            <ul aria-label="Items" className="flex flex-col divide-y divide-border-soft">
+              {sorted.map((item) => (
+                <ItemRow
+                  key={item.id}
+                  item={item}
+                  disabled={items.sending}
+                  onToggle={() => void items.update(item.id, { done: !item.done })}
+                  onRemove={() => void items.remove(item.id)}
+                />
+              ))}
+            </ul>
+          )}
+        </div>
       </div>
     </div>
+  )
+}
+
+/** A form that adds through the collection and clears once the item is stored. */
+function AddForm({
+  sending,
+  onAdd,
+}: {
+  sending: boolean
+  onAdd: (input: ItemInput) => Promise<unknown>
+}) {
+  const [title, setTitle] = useState('')
+  const submit = async (event: FormEvent) => {
+    event.preventDefault()
+    if (!title.trim()) return
+    if (await onAdd({ title })) setTitle('')
+  }
+  return (
+    <form aria-label="Add an item" className="flex gap-2" onSubmit={(event) => void submit(event)}>
+      <Input
+        aria-label="New item"
+        placeholder="Add an item"
+        value={title}
+        maxLength={200}
+        onChange={(event) => setTitle(event.target.value)}
+      />
+      <Button type="submit" size="sm" recommended disabled={sending || !title.trim()}>
+        <Plus data-icon="inline-start" />
+        Add
+      </Button>
+    </form>
+  )
+}
+
+function ItemRow({
+  item,
+  disabled,
+  onToggle,
+  onRemove,
+}: {
+  item: Item
+  disabled: boolean
+  onToggle: () => void
+  onRemove: () => void
+}) {
+  return (
+    <li className="group flex items-start gap-3 py-2.5">
+      <Checkbox
+        aria-label={`Done: ${item.title}`}
+        checked={item.done}
+        disabled={disabled}
+        onChange={onToggle}
+      />
+      <div className="min-w-0 flex-1">
+        <p className={item.done ? 'text-sm text-text-faint line-through' : 'text-sm text-foreground'}>
+          {item.title}
+        </p>
+        {item.note && <p className="mt-0.5 text-xs text-text-soft">{item.note}</p>}
+      </div>
+      <IconButton
+        aria-label={`Remove ${item.title}`}
+        tooltip="Remove"
+        disabled={disabled}
+        className="opacity-0 group-hover:opacity-100 focus-visible:opacity-100"
+        onClick={onRemove}
+      >
+        <Trash2 />
+      </IconButton>
+    </li>
   )
 }

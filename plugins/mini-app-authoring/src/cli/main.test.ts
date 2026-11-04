@@ -196,16 +196,6 @@ describe('mini-app', () => {
     expect(asked).toEqual([undefined, `${cwd}/meal-log`])
   })
 
-  // Skills inject it with a shell command, so it must answer where no kit can be found.
-  test('contract prints the app layer without resolving a kit', async () => {
-    const { context, output } = cli()
-    context.kit = async () => {
-      throw new Error('no kit here')
-    }
-    expect(await runCli(['contract'], context)).toBe(0)
-    expect(output()).toContain('defineCollection(')
-  })
-
   // A plugin newer than the person's Localix would print a contract its kit cannot build.
   test('create refuses a kit older than the app layer, and says how to update', async () => {
     const { context, output } = cli()

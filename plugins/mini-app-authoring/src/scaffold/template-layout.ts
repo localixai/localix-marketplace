@@ -110,9 +110,12 @@ export function findTemplateResidue(
 ): string[] {
   const files = listFiles(miniAppDir)
   const problems: string[] = []
-  const domainNamed = new RegExp(scaffold.domainNamedPaths.join('|'), 'iu')
+  // No names to look for means no path is named after the domain: an empty pattern matches all.
+  const domainNamed = scaffold.domainNamedPaths.length
+    ? new RegExp(scaffold.domainNamedPaths.join('|'), 'iu')
+    : null
 
-  for (const entry of scaffold.domain.filter((path) => domainNamed.test(path))) {
+  for (const entry of scaffold.domain.filter((path) => domainNamed?.test(path))) {
     const kept = entry.endsWith('/')
       ? files.some((file) => file.startsWith(entry))
       : files.includes(entry)

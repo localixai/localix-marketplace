@@ -24,8 +24,8 @@ adds on first start. **In Localix**, install it from the Store (Plugins), then t
 | `/mini-app-authoring:install`       | Builds the package and installs it into the running Localix                       |
 | `/mini-app-authoring:publish`       | Puts the source on GitHub; its workflow releases each version tag as a marketplace |
 | `/mini-app-authoring:get-localix`   | Installs the latest Localix, verified against the release's checksums             |
-| `reference` skill                   | The format and the SDK contract, with recipes; loaded when Claude writes an app   |
-| `mini-app-reviewer` agent           | Reviews a mini app for what the checks cannot see, with the reference preloaded   |
+| `build` skill                       | How to build any part of an app, with references and six working example apps     |
+| `mini-app-reviewer` agent           | Reviews a mini app for what the checks cannot see, with the build skill preloaded |
 | Edit hook                           | After each edit to a mini app's source, reports what breaks Localix's rules       |
 | `mini-app` command                  | The toolchain the skills run; on the Bash tool's PATH while the plugin is enabled |
 
@@ -33,23 +33,28 @@ adds on first start. **In Localix**, install it from the Store (Plugins), then t
 mini-app create <name> [--title "…"] [--description "…"] [--dir <folder>]
 mini-app check [folder]      mini-app build [folder]      mini-app install [folder]
 mini-app test [folder] [files…]                         mini-app api [module [export] | word]
-mini-app pattern [name]
+mini-app doc [topic | example[/file]]
 mini-app pack [folder] --publisher "…" [--out <dir>]      mini-app validate <package | .tar.gz>
 mini-app icon [folder] --glyph '<path d="…"/>' [--tint #hex]
 mini-app ci [folder] [--publisher "…"] [--repository <owner>/<repo>]
-mini-app contract            mini-app kit                 mini-app get-localix
+mini-app kit                 mini-app get-localix
 ```
 
-A new app is a copy of this plugin's reference app, Daily Log (`template/`), whose plumbing —
-routes, storage, the feed that updates an open screen when the agent writes, semantic search — is
-the SDK's app layer (`createMiniApp`, `defineCollection`, `useCollection`, `screenUi`).
-`mini-app create` prints the whole contract with the instruction, so the agent writes only the
-domain and the screen; `mini-app contract` prints it again any time. `mini-app api <module>` prints
-what a kit or SDK module exports, with its types — the props of a dialog, a table or a chart — and
+A new app is a copy of this plugin's starter (`template/`): one collection of items, agent tools
+for it, a list screen with its states, and tests for both. Its plumbing — routes, storage, the feed
+that updates an open screen when the agent writes, semantic search — is the SDK's app layer
+(`createMiniApp`, `defineCollection`, `useCollection`, `screenUi`), so the agent writes only the
+domain and the screens.
+
+How to build one is the `build` skill (`skills/build/`), in the shape of Anthropic's skills: a short
+`SKILL.md` that routes each task to a reference (`references/`: architecture, data, agent tools,
+screens, the Localix look, an app's own look, canvas boards, joining Localix's workspace, tests, the
+manifest) and to a working example app (`examples/`: tracker, board, dashboard, canvas-board, game,
+workspace). Each example is a full mini app that `mini-app check` passes against every kit.
+`mini-app doc` prints the skill, `mini-app doc <topic>` a reference and `mini-app doc <example>` an
+example's README and files, so an agent that may only run `mini-app` reads them too.
+`mini-app api <module>` prints what a kit or SDK module exports, with its types, and
 `mini-app test [folder] [files…]` runs the app's tests alone, as the check runs them.
-`mini-app pattern [name]` prints working screens from the plugin's gallery (`patterns/`, a mini app
-checked against every kit like the template): a page frame, a board, master-detail, a data table, a
-form dialog, a dashboard, the loading/empty/error states and the formatting helpers.
 
 ## Publishing from GitHub
 

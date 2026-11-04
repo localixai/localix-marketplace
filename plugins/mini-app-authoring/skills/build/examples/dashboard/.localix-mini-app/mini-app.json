@@ -1,0 +1,16 @@
+{
+  "name": "example-dashboard",
+  "displayName": "Example Dashboard",
+  "version": "0.1.0",
+  "description": "A worked example of a numbers screen: spending by month and category, budgets with tone, and insights in words, all computed by one shared function.",
+  "author": {
+    "name": "Localix"
+  },
+  "license": "MIT",
+  "apiVersion": 2,
+  "category": "data",
+  "tags": ["dashboard", "example", "spending", "charts"],
+  "icon": "./icon.svg",
+  "surfaces": ["agent", "workbench"],
+  "backend": "./backend/index.ts"
+}

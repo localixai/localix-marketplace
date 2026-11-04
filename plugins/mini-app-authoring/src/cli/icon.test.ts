@@ -49,3 +49,43 @@ test('refuses markup that is not a plain shape, and writes nothing', async () =>
   expect(output()).toContain('only path, circle, rect, line, polyline, polygon and ellipse')
   expect(() => readFileSync(join(dir, 'icon.svg'))).toThrow()
 })
+
+/** A kit whose vendored lucide-react holds `house` (aliased `home`), as a release's kit does. */
+function withLucide() {
+  const app = miniApp()
+  const kitDir = tempDir()
+  writeTree(kitDir, {
+    'ui/vendor/lucide-react/dist/esm/icons/house.mjs': `const __iconData = {
+  name: "house",
+  size: 24,
+  node: [
+    ["path", { d: "M15 21v-8", key: "5wwlr5" }],
+    ["circle", { cx: "12", cy: "7", r: "2", key: "abc" }]
+  ],
+  aliases: ["home"]
+};
+export { __iconData };
+`,
+    // An old name with a module of its own re-exports the icon, as `bar-chart-3.mjs` does.
+    'ui/vendor/lucide-react/dist/esm/icons/home-alt.mjs': "export { default } from './house.mjs';\n",
+  })
+  app.context.kit = async () => ({ kit: fakeKit({ dir: kitDir }), source: { dir: kitDir, from: 'named' } })
+  return app
+}
+
+// Every agent that drew an icon wrote its own script to turn a lucide name into markup.
+test('takes a lucide icon by its name, or by one of its aliases, from the kit', async () => {
+  for (const name of ['house', 'home', 'home-alt']) {
+    const { dir, context } = withLucide()
+    expect(await runCli(['icon', '.', '--glyph', name], context)).toBe(0)
+    expect(readFileSync(join(dir, 'icon.svg'), 'utf8')).toContain(
+      '<path d="M15 21v-8"/><circle cx="12" cy="7" r="2"/>',
+    )
+  }
+})
+
+test('names the miss when no lucide icon has that name', async () => {
+  const { context, output } = withLucide()
+  expect(await runCli(['icon', '.', '--glyph', 'no-such-icon'], context)).toBe(1)
+  expect(output()).toContain('No lucide icon "no-such-icon"')
+})

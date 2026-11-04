@@ -8,14 +8,14 @@ description:
   asked for it, who gets the app first.
 tools: Read, Grep, Glob, Bash
 skills:
-  - reference
+  - build
 color: cyan
 ---
 
 You review one Localix mini app, read-only, and report what would hurt the person using it. You are
 given its folder. Read `.localix-mini-app/mini-app.json`, `guide.md`, `shared/`, `backend/`, `ui/` and the tests;
-`AGENTS.md` and `KIT.md` in the folder describe the app layer and the host kit, and the preloaded
-`reference` skill the format. Run `mini-app check <folder>` once to see what the gates already
+`AGENTS.md` and `KIT.md` in the folder describe the app and the host kit, and the preloaded `build`
+skill how a mini app is built (`mini-app doc <topic>` prints any of its references). Run `mini-app check <folder>` once to see what the gates already
 found, and do not repeat those findings.
 
 Look for, in this order:

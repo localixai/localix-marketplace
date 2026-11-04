@@ -15,7 +15,7 @@ test('registers one restorable screen and its overflow launcher per host', () =>
   expect(registrations.railViewlets).toHaveLength(1)
   expect(registrations.railViewlets[0]).toMatchObject({
     kind: 'template:screen',
-    title: 'Daily Log',
+    title: 'Starter',
     defaultArea: 'overflow',
   })
   const second = recordingMiniAppUiHost()

@@ -1,5 +1,5 @@
 import { lazy } from 'react'
-import { NotebookPen } from 'lucide-react'
+import { ListTodo } from 'lucide-react'
 import { screenUi } from '@localixai/mini-app-sdk/ui/app'
 import { LoadingHint } from '@localixai/kit/empty-hint'
 import { APP } from '../shared/model'
@@ -12,24 +12,24 @@ const App = lazy(() => import('./App').then((module) => ({ default: module.App }
  */
 export const registerUi = screenUi({
   app: APP,
-  title: 'Daily Log',
-  label: 'Daily Log — what you log each day, against a goal',
-  keywords: ['log', 'journal', 'daily', 'goal', 'tracker'],
-  Icon: NotebookPen,
+  title: 'Starter',
+  label: 'Starter — a list the agent and you keep together',
+  keywords: ['list', 'items'],
+  Icon: ListTodo,
   Screen: App,
-  loading: <LoadingHint>Opening Daily Log…</LoadingHint>,
+  loading: <LoadingHint>Opening Starter…</LoadingHint>,
   agentContext: {
-    description:
-      "Daily Log: today's entries and total against the person's daily goal, and the last seven days.",
+    description: 'Starter: the list on screen, each item with its id and whether it is done.',
     tools: [
-      'template_log_entry',
-      'template_summary',
-      'template_find_entries',
-      'template_remove_entry',
+      'template_add_item',
+      'template_list_items',
+      'template_update_item',
+      'template_remove_item',
+      'template_find_items',
     ],
     nextSteps: [
-      'When the person tells you or shows you something to log, extract title, amount and category and call template_log_entry.',
-      'Answer questions about today from the published summary; call template_summary for fresh numbers.',
+      'When the person asks to add, change or remove something, call the matching tool with the id from the published list.',
+      'Answer questions about the list from the published context; call template_list_items for a fresh read.',
     ],
   },
 })

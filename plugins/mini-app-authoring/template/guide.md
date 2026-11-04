@@ -1,31 +1,19 @@
-_Use: Log what the person eats, spends or does each day in Daily Log, against their daily goal, and
-answer how today and the week are going. Use when they tell you or show you something to log, or ask
-about their totals; not for anything the log does not hold._
+_Use: Keep the person's Starter list — add, change, tick and remove items — and answer what is on it.
+Use when they ask to put something on the list or about what is there; not for anything the list does
+not hold._
 
-# Log an entry
+# Add, change and remove
 
-When the person tells you or shows you something to log — a sentence, a photo of a meal, a receipt —
-work out each thing in it and call `template_log_entry` once per thing:
+- Something to add: call `template_add_item` once per item, with a short `title` the person would
+  recognise and a `note` only when there is more worth keeping.
+- A change ("the second one is done", "rename it"): find the item's id in the list on screen or with
+  `template_list_items`, then call `template_update_item` with only the fields that change.
+- A removal: the same, with `template_remove_item`. Never remove an item the person did not name.
 
-- `title`: a short name the person would recognise ("Oatmeal with berries", "Taxi home").
-- `amount`: a number in the app's unit (the summary names it). Estimate it from the photo or the
-  words when nobody said it, and say in your answer that it is an estimate.
-- `category`: a short group ("Breakfast", "Transport"); reuse one the log already has.
-- `note`: anything worth keeping that does not fit the others; leave it out otherwise.
-- `at`: only when it happened at another time than now ("yesterday's dinner").
+Each tool answers with the whole list. Tell the person what changed in one line, not the whole list.
 
-The tool answers with today's summary. Tell the person what you logged, the amount, and what is left
-of the goal — one or two lines, not the whole log.
+# Answer about the list
 
-# Answer about today and the week
-
-While the Daily Log tab is open, the person's message carries what it shows ("Today: … of …").
-Answer from it. Call `template_summary` when nothing is attached or the person asks for fresh
-numbers. Use `template_find_entries` to find past entries by meaning ("when did I last have
-pasta?").
-
-# Fix a mistake
-
-To remove an entry, find its id in the summary or with `template_find_entries`, then call
-`template_remove_entry`. To change one, remove it and log it again. Never remove an entry the person
-did not name.
+While the Starter tab is open, the person's message carries what it shows. Answer from it; call
+`template_list_items` when nothing is attached, and `template_find_items` to find an item by meaning
+("the one about the dentist").

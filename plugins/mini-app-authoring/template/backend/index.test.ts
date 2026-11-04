@@ -5,90 +5,86 @@ import {
   requestRoute,
   testMiniAppContext,
 } from '@localixai/mini-app-sdk/backend/testing'
+import type { Item } from '../shared/model'
 import { register } from './index'
 
-describe('Daily Log', () => {
-  test('what the agent logs is on the screen, and what the screen adds the agent sees', async () => {
+/** The list as the screen reads it. */
+async function itemsOf(app: ReturnType<typeof register>): Promise<Item[]> {
+  return ((await requestRoute(app, 'GET', '/items')).json as { items: Item[] }).items
+}
+
+/**
+ * The backend tested through what the agent and the screen do: the agent's tools and the screen's
+ * routes, on one store. Keep this shape when you change the domain: one test per thing a person or
+ * the agent does, asserting what they are told back.
+ */
+describe('Starter', () => {
+  test('what the agent adds is on the screen, and what the screen adds the agent sees', async () => {
     await using ctx = await testMiniAppContext({ name: 'template' })
     const app = register(ctx)
 
-    const logged = await callTool(app, 'template_log_entry', {
-      title: 'Oatmeal',
-      amount: 320,
-      category: 'Breakfast',
-    })
-    expect(logged).toEqual({
-      text: expect.stringContaining('Logged Oatmeal: 320 kcal.'),
-      isError: false,
-    })
-    expect(logged.text).toContain('Today: 320 of 2000 kcal (16%)')
+    const added = await callTool(app, 'template_add_item', { title: 'Buy milk' })
+    expect(added).toEqual({ text: expect.stringContaining('Added "Buy milk".'), isError: false })
 
-    const screen = await requestRoute(app, 'POST', '/entries', { title: 'Apple', amount: 80 })
+    const screen = await requestRoute(app, 'POST', '/items', { title: 'Call the dentist' })
     expect(screen.json).toEqual({
       items: [
-        expect.objectContaining({ title: 'Oatmeal', category: 'Breakfast' }),
-        expect.objectContaining({ title: 'Apple', category: 'General' }),
+        expect.objectContaining({ title: 'Buy milk', done: false, note: '' }),
+        expect.objectContaining({ title: 'Call the dentist', done: false }),
       ],
     })
-    const summary = await callTool(app, 'template_summary', {})
-    expect(summary.text).toContain('Today: 400 of 2000 kcal (20%), 1600 kcal left.')
-    expect(summary.text).toContain('- Apple: 80 kcal, General')
+    const listed = await callTool(app, 'template_list_items', {})
+    expect(listed.text).toContain('2 items, 2 open.')
+    expect(listed.text).toContain('- [ ] Call the dentist')
   })
 
-  test('the agent is shown the limits the log keeps, so a call it makes is one the log accepts', async () => {
+  test('a change keeps every field it does not name', async () => {
     await using ctx = await testMiniAppContext({ name: 'template' })
-    const tool = register(ctx).tools?.find((t) => t.name === 'template_log_entry')
+    const app = register(ctx)
+    await callTool(app, 'template_add_item', { title: 'Buy milk', note: 'oat' })
+    const [{ id }] = await itemsOf(app)
+
+    const changed = await callTool(app, 'template_update_item', { id, done: true })
+    expect(changed.isError).toBe(false)
+    expect(await itemsOf(app)).toEqual([
+      expect.objectContaining({ id, title: 'Buy milk', note: 'oat', done: true }),
+    ])
+  })
+
+  test('the agent is told when an id it acts on is not there, and nothing changes', async () => {
+    await using ctx = await testMiniAppContext({ name: 'template' })
+    const app = register(ctx)
+    await callTool(app, 'template_add_item', { title: 'Buy milk' })
+
+    for (const tool of ['template_update_item', 'template_remove_item']) {
+      const missed = await callTool(app, tool, { id: 'nope', done: true })
+      expect(missed).toEqual({ text: expect.stringContaining('No item has that id'), isError: true })
+    }
+    expect(await itemsOf(app)).toHaveLength(1)
+  })
+
+  test('the agent is shown the limits the list keeps, so a call it makes is one the list accepts', async () => {
+    await using ctx = await testMiniAppContext({ name: 'template' })
+    const tool = register(ctx).tools?.find((t) => t.name === 'template_add_item')
     const accepts = (input: unknown) => tool?.inputSchema?.safeParse(input).success
 
-    expect(accepts({ title: 'Oatmeal', amount: 320 })).toBe(true)
-    expect(accepts({ title: 'x'.repeat(121), amount: 320 })).toBe(false)
-    expect(accepts({ title: '   ', amount: 320 })).toBe(false)
+    expect(accepts({ title: 'Buy milk' })).toBe(true)
+    expect(accepts({ title: '   ' })).toBe(false)
+    expect(accepts({ title: 'x'.repeat(201) })).toBe(false)
   })
 
-  test('the agent removes an entry by the id it was shown, and is told when it is gone', async () => {
-    await using ctx = await testMiniAppContext({ name: 'template' })
-    const app = register(ctx)
-    await requestRoute(app, 'POST', '/entries', { title: 'Cake', amount: 450 })
-    const [cake] = (
-      (await requestRoute(app, 'GET', '/entries')).json as { items: { id: string }[] }
-    ).items
-
-    expect((await callTool(app, 'template_remove_entry', { id: cake!.id })).text).toContain(
-      'Removed it.',
-    )
-    expect(await callTool(app, 'template_remove_entry', { id: cake!.id })).toEqual({
-      text: expect.stringContaining('No entry has that id'),
-      isError: true,
-    })
-  })
-
-  test('the goal and the unit come from the app’s settings, for the screen and the agent', async () => {
-    await using ctx = await testMiniAppContext({
-      name: 'template',
-      config: { DAILY_GOAL: '10000', UNIT: 'steps' },
-    })
-    const app = register(ctx)
-
-    expect((await requestRoute(app, 'GET', '/settings')).json).toEqual({
-      dailyGoal: 10000,
-      unit: 'steps',
-    })
-    expect((await callTool(app, 'template_summary', {})).text).toContain('Today: 0 of 10000 steps')
-  })
-
-  test('the agent finds past entries by meaning, and is told when search is not ready', async () => {
+  test('finds an item by meaning, and is told when search is not ready', async () => {
     const semantic = fakeSemantic()
     await using ctx = await testMiniAppContext({ name: 'template', host: { semantic } })
     const app = register(ctx)
-    await callTool(app, 'template_log_entry', { title: 'Tomato soup', amount: 180 })
-    await callTool(app, 'template_log_entry', { title: 'Toast', amount: 200 })
+    await callTool(app, 'template_add_item', { title: 'Book a dentist appointment' })
+    await callTool(app, 'template_add_item', { title: 'Buy milk' })
 
-    expect((await callTool(app, 'template_find_entries', { query: 'soup' })).text).toContain(
-      'No entries match',
-    )
+    const early = await callTool(app, 'template_find_items', { query: 'dentist' })
+    expect(early.text).toContain('search is not ready')
     semantic.ready = true
-    const found = await callTool(app, 'template_find_entries', { query: 'soup' })
-    expect(found.text).toContain('Tomato soup, 180 kcal')
-    expect(found.text).not.toContain('Toast')
+    const found = await callTool(app, 'template_find_items', { query: 'dentist' })
+    expect(found.text).toContain('Book a dentist appointment')
+    expect(found.text).not.toContain('Buy milk')
   })
 })
