@@ -1,0 +1,3 @@
+[test]
+# The kit serves the host's shared modules, React and the DOM harness to this app's tests.
+preload = ["@localixai/mini-app-kit/test-preload"]

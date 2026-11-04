@@ -1,0 +1,15 @@
+{
+  "name": "@localix-mini-app/recall",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Dependencies for Recall: the FSRS scheduler and the zip reader for Anki imports.",
+  "license": "MIT",
+  "type": "module",
+  "scripts": {
+    "check": "mini-app check ."
+  },
+  "dependencies": {
+    "fflate": "0.8.3",
+    "ts-fsrs": "5.4.2"
+  }
+}

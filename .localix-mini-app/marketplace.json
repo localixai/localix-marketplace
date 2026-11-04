@@ -182,6 +182,10 @@
       }
     },
     {
+      "name": "recall",
+      "source": "./mini-apps/recall"
+    },
+    {
       "name": "resume",
       "source": "./mini-apps/resume"
     },

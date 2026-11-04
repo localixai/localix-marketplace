@@ -1,0 +1,7 @@
+node_modules/
+dist/
+.turbo/
+.preview-data/
+*.tsbuildinfo
+tsconfig.json
+KIT.md

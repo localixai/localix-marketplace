@@ -1,0 +1,49 @@
+{
+  "name": "recall",
+  "displayName": "Recall",
+  "version": "0.1.0",
+  "description": "Spaced-repetition flashcards: study on the screen, and let the agent make cards from your notes and files, quiz you, explain misses and manage your decks. Imports Anki, CSV and Markdown.",
+  "author": {
+    "name": "Localix"
+  },
+  "license": "MIT",
+  "keywords": [
+    "flashcards",
+    "spaced repetition",
+    "study",
+    "anki"
+  ],
+  "apiVersion": 2,
+  "category": "utilities",
+  "tags": [
+    "flashcards",
+    "spaced-repetition",
+    "study",
+    "anki",
+    "learning"
+  ],
+  "icon": "./icon.svg",
+  "screenshots": [
+    {
+      "path": "./screenshots/today.png",
+      "caption": "Today: one button to study, your goal and your decks"
+    },
+    {
+      "path": "./screenshots/study.png",
+      "caption": "Studying a card, with a keyboard shortcut for every answer"
+    },
+    {
+      "path": "./screenshots/cards.png",
+      "caption": "Cards: search, filter and fix everything you have written"
+    },
+    {
+      "path": "./screenshots/stats.png",
+      "caption": "Stats: activity, forecast and how much you remember"
+    }
+  ],
+  "surfaces": [
+    "agent",
+    "workbench"
+  ],
+  "backend": "./backend/index.ts"
+}
