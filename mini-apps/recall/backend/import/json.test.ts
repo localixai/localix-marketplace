@@ -28,7 +28,7 @@ const data: RecallExport = {
     { id: 'r1', cardId: 'c1', noteId: 'n1', rating: 3, state: 2, due: now, stability: 1, difficulty: 1, scheduledDays: 1, elapsedDays: 1, reviewedAt: '2026-01-02T00:00:00.000Z', durationMs: 4200, source: 'chat', prev },
     { id: 'r0', cardId: 'c1', noteId: 'n1', rating: 1, state: 1, due: now, stability: 1, difficulty: 1, scheduledDays: 0, elapsedDays: 0, reviewedAt: '2026-01-01T00:00:00.000Z', durationMs: 1000, source: 'screen', prev },
   ],
-  settings: { retention: 0.9, newPerDay: 20, buttons: 'two', dayStartsAt: 4, dailyGoal: 20, typedAnswerCheck: false, suggestPlacement: true },
+  settings: { retention: 0.9, newPerDay: 20, buttons: 'two', dayStartsAt: 4, dailyGoal: 20, typedAnswerCheck: false, suggestPlacement: true, autoplaySounds: true },
 }
 
 const read = (text: string, name = 'recall.json') =>
@@ -64,10 +64,18 @@ describe('Recall JSON backup', () => {
     await expect(read('{"version":2}')).rejects.toThrow(/newer version/)
   })
 
-  test('a note with a picture warns that a backup holds no pictures', async () => {
+  test('a backup made before the sound setting existed still imports', async () => {
+    const { autoplaySounds: _later, ...older } = data.settings
+    const batch = await read(JSON.stringify({ ...data, settings: older }))
+    expect(batch.notes).toHaveLength(2)
+  })
+
+  test('a note with a picture or a sound warns that a backup holds neither', async () => {
     const withImage = { ...data, notes: [{ ...data.notes[0]!, front: '![](media/abc.png)' }] }
     const batch = await read(JSON.stringify(withImage))
-    expect(batch.warnings[0]).toContain('1 note with images')
+    expect(batch.warnings[0]).toContain('1 note with pictures or sounds: a backup holds neither')
+    const withSound = { ...data, notes: [{ ...data.notes[0]!, extra: '[audio](media/abc.mp3)' }] }
+    expect((await read(JSON.stringify(withSound))).warnings[0]).toContain('1 note with pictures or sounds')
   })
 })
 
@@ -86,5 +94,15 @@ describe('CSV export', () => {
     const tricky = { ...data, notes: [{ ...data.notes[0]!, front: 'say "hi",\nthen go', back: ' padded ' }] }
     const batch = await read(exportCollection(tricky, 'csv'), 'out.csv')
     expect(batch.notes[0]).toMatchObject({ front: 'say "hi",\nthen go', back: 'padded' })
+  })
+
+  test('a sound is left out of the text formats instead of showing as the word "audio"', () => {
+    const sounded = { ...data, notes: [{ ...data.notes[0]!, front: 'uno\n\n[audio](media/aa.mp3)', extra: '[audio](media/bb.mp3)' }] }
+    for (const format of ['csv', 'markdown'] as const) {
+      const text = exportCollection(sounded, format)
+      expect(text).toContain('uno')
+      expect(text).not.toMatch(/audio|media\//)
+    }
+    expect(exportCollection(sounded, 'json')).toContain('[audio](media/aa.mp3)')
   })
 })

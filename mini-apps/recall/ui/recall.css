@@ -138,6 +138,20 @@
   font-weight: 600;
 }
 
+/* The answer and grade buttons: one quiet line. Good (the default) has a stronger edge, never a fill. */
+.recall-action {
+  border: 1px solid color-mix(in oklab, var(--foreground) 14%, transparent);
+  color: color-mix(in oklab, var(--foreground) 82%, transparent);
+  font-weight: 450;
+}
+.recall-action[data-main='true'] {
+  border-color: color-mix(in oklab, var(--foreground) 48%, transparent);
+  color: var(--foreground);
+  font-weight: 550;
+}
+.recall-action .recall-grade-when {
+  color: color-mix(in oklab, var(--foreground) 52%, transparent);
+}
 .recall-grade[data-suggested='true'] {
   outline: 2px solid color-mix(in oklab, var(--recall-accent) 70%, transparent);
   outline-offset: 1px;
@@ -310,7 +324,21 @@
 [data-theme='light'] .recall-filled {
   background: color-mix(in oklab, var(--recall-accent) 30%, transparent);
 }
-[data-theme='light'] .recall-grade[data-suggested='true'] {
+[data-theme='light'] /* The answer and grade buttons: one quiet line. Good (the default) has a stronger edge, never a fill. */
+.recall-action {
+  border: 1px solid color-mix(in oklab, var(--foreground) 14%, transparent);
+  color: color-mix(in oklab, var(--foreground) 82%, transparent);
+  font-weight: 450;
+}
+.recall-action[data-main='true'] {
+  border-color: color-mix(in oklab, var(--foreground) 48%, transparent);
+  color: var(--foreground);
+  font-weight: 550;
+}
+.recall-action .recall-grade-when {
+  color: color-mix(in oklab, var(--foreground) 52%, transparent);
+}
+.recall-grade[data-suggested='true'] {
   outline-color: color-mix(in oklab, var(--foreground) 70%, transparent);
 }
 [data-theme='light'] .recall-code {

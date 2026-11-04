@@ -4,6 +4,7 @@ import {
   cardSchema,
   deckInputSchema,
   deckSchema,
+  libraryQuerySchema,
   noteSchema,
   ratingSchema,
   reviewSchema,
@@ -212,15 +213,30 @@ export const BULK_ACTIONS = [
   'discard',
   'delete',
 ] as const
-export const bulkRequestSchema = z.object({
-  /** Note ids. */
-  ids: z.array(z.string().min(1)).min(1).max(5000),
-  action: z.enum(BULK_ACTIONS),
-  /** For 'move': the deck, `null` for the Inbox. */
-  deckId: z.string().nullable().optional(),
-  /** For 'tag-add' / 'tag-remove'. */
-  tags: z.array(z.string().trim().min(1).max(50)).max(30).optional(),
-})
+/**
+ * One action over notes, named either by `ids` (at most 5,000) or by `match`: the library query the
+ * list was showing, which the server resolves itself. `expect` is how many notes the person was
+ * told that is; if the list has changed since, the server refuses instead of guessing.
+ */
+export const bulkRequestSchema = z
+  .object({
+    ids: z.array(z.string().min(1)).min(1).max(5000).optional(),
+    match: libraryQuerySchema.omit({ offset: true, limit: true }).optional(),
+    expect: z.number().int().min(0).optional(),
+    action: z.enum(BULK_ACTIONS),
+    /** For 'move': the deck, `null` for the Inbox. */
+    deckId: z.string().nullable().optional(),
+    /** For 'tag-add' / 'tag-remove'. */
+    tags: z.array(z.string().trim().min(1).max(50)).max(30).optional(),
+  })
+  .refine((request) => (request.ids === undefined) !== (request.match === undefined), {
+    message: 'Send either ids or match, not both and not neither.',
+    path: ['ids'],
+  })
+  .refine((request) => request.match === undefined || request.expect !== undefined, {
+    message: 'Say how many cards the list matched (expect).',
+    path: ['expect'],
+  })
 export type BulkRequest = z.infer<typeof bulkRequestSchema>
 export const bulkResultSchema = z.object({ affected: z.number(), message: z.string() })
 

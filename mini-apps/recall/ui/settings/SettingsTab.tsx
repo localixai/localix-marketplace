@@ -166,6 +166,9 @@ export function SettingsTab() {
             ]}
           />
         </Row>
+        <Row label="Play sounds by themselves" description="A card's first sound plays when it appears, and the answer's when you turn it over. R plays it again.">
+          <Switch aria-label="Play sounds by themselves" checked={value.autoplaySounds} onChange={(event) => void save({ autoplaySounds: event.target.checked })} />
+        </Row>
         <Row label="Day starts at" description="Late-night study counts for the day before.">
           <Select aria-label="Day starts at" value={String(value.dayStartsAt)} options={HOURS} onValueChange={(hour) => void save({ dayStartsAt: Number(hour) })} />
         </Row>

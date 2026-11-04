@@ -3,6 +3,7 @@ import { mkdirSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { onStoreWrite } from '@localixai/mini-app-sdk/backend'
 import type { LibraryPage, NoteDetail, SaveNoteResult } from '../shared/payloads'
+import { createService } from './service'
 import { addReady, rawRoute, recallApp, route } from './test-support'
 
 /** The Cards tab: notes, their cards, decks, the library, bulk actions and media. */
@@ -103,6 +104,81 @@ describe('notes and decks', () => {
     await route(ctx.app, 'bulk', { body: { ids, action: 'pause' }, expect: 404 })
   })
 
+  describe('a bulk action over everything a list matches', () => {
+    const everything = { sort: 'newest' as const }
+    async function filled(ctx: Awaited<ReturnType<typeof recallApp>>) {
+      await addReady(ctx.app, [
+        { front: 'Hola', back: 'hello', tags: ['greek'] },
+        { front: 'Adios', back: 'bye', tags: ['greek'] },
+        { front: 'Mitosis', back: 'division', tags: ['bio'] },
+      ])
+      return (await route<LibraryPage>(ctx.app, 'library', { query: { tags: ['greek'] } })).rows.map((row) => row.note.id)
+    }
+
+    test('tags, moves and deletes exactly the matching notes and no others', async () => {
+      await using ctx = await recallApp()
+      const greek = await filled(ctx)
+      const match = { ...everything, tags: ['greek'] }
+      const tagged = await route(ctx.app, 'bulk', { body: { match, expect: 2, action: 'tag-add', tags: ['exam'] } })
+      expect(tagged).toEqual({ affected: 2, message: 'Tagged 2 notes: #exam.' })
+      const exam = await route<LibraryPage>(ctx.app, 'library', { query: { tags: ['exam'] } })
+      expect(exam.rows.map((row) => row.note.id).sort()).toEqual([...greek].sort())
+
+      const deck = await route(ctx.app, 'deckCreate', { body: { name: 'Greek' } })
+      await route(ctx.app, 'bulk', { body: { match, expect: 2, action: 'move', deckId: deck.id } })
+      expect((await route<LibraryPage>(ctx.app, 'library', { query: { deckIds: [deck.id] } })).total).toBe(2)
+
+      const deleted = await route(ctx.app, 'bulk', { body: { match, expect: 2, action: 'delete' } })
+      expect(deleted.affected).toBe(2)
+      const left = await route<LibraryPage>(ctx.app, 'library')
+      expect(left.rows.map((row) => row.note.front)).toEqual(['Mitosis'])
+    })
+
+    test('a count that is not the list\'s any more is refused with a 409 and nothing changes', async () => {
+      await using ctx = await recallApp()
+      await filled(ctx)
+      const match = { ...everything, tags: ['greek'] }
+      await route(ctx.app, 'bulk', { body: { match, expect: 3, action: 'delete' }, expect: 409 })
+      expect((await route<LibraryPage>(ctx.app, 'library')).total).toBe(3)
+      const answer = await jsonPost(ctx.app, '/notes/bulk', { match, expect: 5, action: 'delete' })
+      expect(answer.status).toBe(409)
+      expect((answer.json as { error: { message: string } }).error.message).toBe(
+        'The list changed — look again before you do this to every card.',
+      )
+    })
+
+    test('ids and match together, or neither, are a 400', async () => {
+      await using ctx = await recallApp()
+      const ids = await filled(ctx)
+      await route(ctx.app, 'bulk', { body: { ids, match: everything, expect: 2, action: 'pause' }, expect: 400 })
+      await route(ctx.app, 'bulk', { body: { action: 'pause' }, expect: 400 })
+      await route(ctx.app, 'bulk', { body: { match: everything, action: 'pause' }, expect: 400 })
+      expect((await route<LibraryPage>(ctx.app, 'library', { query: { states: ['paused'] } })).total).toBe(0)
+    })
+
+    test('more than 5,000 matches work: no id list is sent, so no cap applies', async () => {
+      await using ctx = await recallApp()
+      const service = createService({ dataDir: ctx.dataDir, clock: ctx.clock })
+      const total = 5200
+      await service.addNotes(
+        Array.from({ length: total }, (_, index) => ({ front: `word ${index}`, back: 'x', tags: ['big'] })),
+        { source: 'manual', status: 'active', skipDuplicates: false },
+      )
+      const match = { ...everything, tags: ['big'] }
+      const paused = await route(ctx.app, 'bulk', { body: { match, expect: total, action: 'pause' } })
+      expect(paused.affected).toBe(total)
+      expect((await route<LibraryPage>(ctx.app, 'library', { query: { states: ['paused'] } })).total).toBe(total)
+      await route(ctx.app, 'bulk', { body: { match, expect: total, action: 'delete' } })
+      expect((await route<LibraryPage>(ctx.app, 'library')).total).toBe(0)
+    })
+
+    test('a meaning search cannot be resolved on the server, so it is refused rather than guessed', async () => {
+      await using ctx = await recallApp()
+      await filled(ctx)
+      await route(ctx.app, 'bulk', { body: { match: { q: 'greeting', mode: 'meaning' }, expect: 1, action: 'delete' }, expect: 422 })
+    })
+  })
+
   test('drafts wait until accepted, and discarding removes them', async () => {
     await using ctx = await recallApp()
     for (const front of ['One?', 'Two?']) {
@@ -152,4 +228,34 @@ describe('notes and decks', () => {
     expect((await rawRoute(ctx.app, 'GET', '/media/..%2Frecall.db')).status).toBe(404)
     expect((await rawRoute(ctx.app, 'GET', '/media/missing.png')).status).toBe(404)
   })
+
+  test('sounds are served with the type a player expects', async () => {
+    await using ctx = await recallApp()
+    mkdirSync(join(ctx.dataDir, 'media'), { recursive: true })
+    const types: Record<string, string> = {
+      mp3: 'audio/mpeg',
+      m4a: 'audio/mp4',
+      aac: 'audio/aac',
+      ogg: 'audio/ogg',
+      oga: 'audio/ogg',
+      opus: 'audio/ogg',
+      wav: 'audio/wav',
+      flac: 'audio/flac',
+    }
+    for (const [extension, type] of Object.entries(types)) {
+      writeFileSync(join(ctx.dataDir, 'media', `clip.${extension}`), new Uint8Array([1, 2, 3]))
+      const answer = await rawRoute(ctx.app, 'GET', `/media/clip.${extension}`)
+      expect([extension, answer.status, answer.headers.get('content-type')]).toEqual([extension, 200, type])
+    }
+  })
 })
+
+async function jsonPost(app: Parameters<typeof rawRoute>[0], path: string, body: object) {
+  const mount = [app.backend ?? []].flat().find((part) => part.routeMount)!.routeMount!
+  const response = await mount.app.request(
+    path,
+    { method: 'POST', body: JSON.stringify(body), headers: { 'content-type': 'application/json' } },
+    { userId: 'test-user', projectId: '', cwd: '/' },
+  )
+  return { status: response.status, json: await response.json() }
+}

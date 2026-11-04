@@ -123,7 +123,7 @@ export function deckTools(deps: ToolDeps) {
       label: 'Recall settings',
       activeVerb: 'Reading settings',
       description:
-        'Read the settings, or change the ones given: retention 0.8/0.9/0.95, newPerDay, buttons two|four, dayStartsAt (hour), dailyGoal, typedAnswerCheck, suggestPlacement. Change only what the person asked for.',
+        'Read the settings, or change the ones given: retention 0.8/0.9/0.95, newPerDay, buttons two|four, dayStartsAt (hour), dailyGoal, typedAnswerCheck, suggestPlacement, autoplaySounds. Change only what the person asked for.',
       inputSchema: settingsPatchSchema.extend({
         retention: settingsPatchSchema.shape.retention.describe('How much to remember: 0.8, 0.9 (default) or 0.95. Higher means more reviews.'),
         newPerDay: settingsPatchSchema.shape.newPerDay.describe('New cards a day (default 20).'),

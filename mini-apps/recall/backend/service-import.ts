@@ -1,5 +1,6 @@
 import { duplicateKey, noteProblem, variantsFor } from '../shared/cloze'
 import { countOf, snippet } from '../shared/format'
+import { textOnly } from '../shared/sound'
 import { normalizeTags, type Review } from '../shared/model'
 import type { ImportOptions, ImportPreview, ImportResult } from '../shared/payloads-more'
 import { createScheduler, LEECH_LAPSES } from '../shared/scheduler'
@@ -41,12 +42,15 @@ export function importOps(core: Core) {
             .filter((deck) => deck.notes > 0),
           duplicates: batch.notes.filter((note) => existing.has(keyOf(note))).length,
           withProgress: batch.notes.filter((note) => Object.values(note.progress ?? {}).some((r) => r.length)).length,
-          media: batch.media.length,
+          media: batch.mediaCounts.pictures + batch.mediaCounts.sounds,
+          pictures: batch.mediaCounts.pictures,
+          sounds: batch.mediaCounts.sounds,
           warnings: batch.warnings,
+          notices: batch.notices,
           sample: batch.notes.slice(0, 5).map((note) => ({
             kind: note.kind,
-            front: snippet(note.front, 160),
-            back: snippet(note.back, 160),
+            front: snippet(textOnly(note.front), 160),
+            back: snippet(textOnly(note.back), 160),
           })),
         }
       }),
@@ -55,6 +59,7 @@ export function importOps(core: Core) {
       const status = options.status ?? 'draft'
       const keepProgress = options.keepProgress ?? true
       const skipDuplicates = options.skipDuplicates ?? true
+      if (batch.preview) throw invalid('That was only a preview, so its sounds and pictures were not stored. Read the file again to import it.')
       return core.write((db, now, touched) => {
         if (options.deckId && !getDeck(db, options.deckId)) {
           throw invalid('No deck has that id. List the decks for their ids.')
@@ -87,7 +92,7 @@ export function importOps(core: Core) {
         let skipped = 0
         let unreadable = 0
         let replayed = 0
-        for (const imported of batch.notes) {
+        for (const [position, imported] of batch.notes.entries()) {
           const key = keyOf(imported)
           if (skipDuplicates && seen.has(key)) {
             skipped += 1
@@ -100,6 +105,8 @@ export function importOps(core: Core) {
           seen.add(key)
           const deckId = deckFor(imported.deck)
           const id = crypto.randomUUID()
+          // A millisecond per note keeps the file's order in the library's oldest and newest lists.
+          const stamp = new Date(now.getTime() + position).toISOString()
           insertNote(db, {
             id,
             deckId,
@@ -110,14 +117,15 @@ export function importOps(core: Core) {
             tags: normalizeTags(imported.tags),
             status,
             source: `import:${batch.source}`.slice(0, 300),
-            createdAt: at,
-            updatedAt: at,
+            createdAt: stamp,
+            updatedAt: stamp,
           })
           touched.add(id)
           added += 1
           placed.set(deckId, (placed.get(deckId) ?? 0) + 1)
           for (const variant of variantsFor(imported.kind, imported.front)) {
-            const card = freshCard(id, variant, now)
+            // A millisecond per note keeps the file's order when the new cards are studied.
+            const card = freshCard(id, variant, new Date(now.getTime() + position))
             const history = keepProgress ? (imported.progress?.[variant] ?? []) : []
             const steps = scheduler.replay(history, at)
             const last = steps.at(-1)?.after
@@ -150,6 +158,7 @@ export function importOps(core: Core) {
           status,
           reviewsReplayed: replayed,
           warnings,
+          notices: batch.notices,
           decks: [...placed.entries()].map(([deckId, notes]) => {
             const deck = deckId ? getDeck(db, deckId) : null
             return { id: deck?.id ?? 'inbox', name: deck?.name ?? 'Inbox', color: deck?.color ?? 0, notes }

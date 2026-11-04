@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react'
+import { withoutSounds } from '../shared/sound'
 
 /**
  * Inline Markdown for one-line titles: code, bold and emphasis are drawn; links, images, headings,
@@ -10,11 +11,14 @@ const TOKEN = /(`+)([^`]|[^`][\s\S]*?[^`])\1(?!`)|\*\*([^*]+?)\*\*|__([^_]+?)__|
 
 /** The text with the block-level and link syntax taken out, on one line. */
 function flatten(markdown: string): string {
-  return markdown
+  return withoutSounds(markdown)
     .replace(/!\[([^\]]*)\]\([^)]*\)/g, '$1')
     .replace(/\[([^\]]+)\]\([^)]*\)/g, '$1')
     .replace(/<\/?[a-zA-Z][^>]*>/g, '')
     .replace(/^\s{0,3}(#{1,6}\s+|[-*+]\s+|\d+[.)]\s+|>\s*)/gm, '')
+    // The importer escapes a number, `#` or `>` at a line's start so it is not read as a list or heading.
+    .replace(/^(\s*\d{1,9})\\([.)])/gm, '$1$2')
+    .replace(/^(\s*)\\([#>+\-=])/gm, '$1$2')
     .replace(/\s+/g, ' ')
     .trim()
 }

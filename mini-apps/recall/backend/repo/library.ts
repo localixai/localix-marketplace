@@ -86,7 +86,7 @@ export function pageWhere(
   ).map(toNote)
 }
 
-/** Ids of every note a WHERE matches, up to `cap`: for bulk actions over a filter. */
+/** Ids of every note a WHERE matches, up to `cap` (`-1`: all of them): for bulk actions over a filter. */
 export function idsWhere(db: Db, where: Clause, cap: number): string[] {
   return (
     db.query(`SELECT n.id FROM notes n WHERE ${where.sql} LIMIT $cap`).all({ ...where.params, cap }) as {

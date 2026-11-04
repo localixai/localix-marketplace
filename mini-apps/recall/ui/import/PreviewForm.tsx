@@ -47,16 +47,26 @@ export function PreviewForm({
           <Metric label="With progress" value={preview.withProgress} />
         </div>
         {preview.decks.length > 0 && (
-          <ul className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-text-soft" aria-label="Decks in the file">
+          <ul
+            className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-text-soft"
+            aria-label="Decks in the file"
+          >
             {preview.decks.slice(0, 8).map((d) => (
               <li key={d.name}>
-                {d.name} <span className="text-text-faint tabular-nums">{d.notes}{d.exists ? '' : ' · new'}</span>
+                {d.name}{' '}
+                <span className="text-text-faint tabular-nums">
+                  {d.notes}
+                  {d.exists ? '' : ' · new'}
+                </span>
               </li>
             ))}
           </ul>
         )}
         {preview.warnings.length > 0 && (
-          <ul className="flex flex-col gap-1 rounded-md bg-status-warning/12 px-3 py-2 text-xs" aria-label="Warnings">
+          <ul
+            className="flex flex-col gap-1 rounded-md bg-status-warning/12 px-3 py-2 text-xs"
+            aria-label="Warnings"
+          >
             {preview.warnings.map((w) => (
               <li key={w} className="flex items-start gap-1.5">
                 <TriangleAlert className="mt-0.5 size-3 shrink-0 text-status-warning" aria-hidden />
@@ -66,11 +76,16 @@ export function PreviewForm({
           </ul>
         )}
         {preview.sample.length > 0 && (
-          <ul className="divide-y divide-border-faint rounded-lg border border-border-soft text-xs" aria-label="A few cards from the file">
+          <ul
+            className="divide-y divide-border-faint rounded-lg border border-border-soft text-xs"
+            aria-label="A few cards from the file"
+          >
             {preview.sample.slice(0, 3).map((card, index) => (
               <li key={index} className="flex gap-3 px-3 py-1.5">
                 <span className="min-w-0 flex-1 truncate">{snippet(card.front, 60)}</span>
-                <span className="min-w-0 flex-1 truncate text-text-faint">{snippet(card.back, 60)}</span>
+                <span className="min-w-0 flex-1 truncate text-text-faint">
+                  {snippet(card.back, 60)}
+                </span>
               </li>
             ))}
           </ul>
@@ -86,7 +101,14 @@ export function PreviewForm({
             ]}
           />
         </Field>
-        <Field label="Start as" description={status === 'draft' ? 'Drafts wait on the Today tab until you accept them.' : 'Ready cards are studied at once.'}>
+        <Field
+          label="Start as"
+          description={
+            status === 'draft'
+              ? 'Drafts wait on the Today tab until you accept them.'
+              : 'Ready cards are studied at once.'
+          }
+        >
           <SegmentedRadioGroup<'draft' | 'active'>
             aria-label="Start as"
             value={status}
@@ -99,17 +121,41 @@ export function PreviewForm({
           />
         </Field>
         {preview.withProgress > 0 && (
-          <Field label="Keep Anki progress" layout="inline" description="Cards continue where you left off.">
-            <Switch aria-label="Keep Anki progress" checked={keepProgress} onChange={(e) => setKeepProgress(e.target.checked)} />
+          <Field
+            label="Keep Anki progress"
+            layout="inline"
+            description="Cards continue where you left off."
+          >
+            <Switch
+              aria-label="Keep Anki progress"
+              checked={keepProgress}
+              onChange={(e) => setKeepProgress(e.target.checked)}
+            />
           </Field>
         )}
-        <Field label="Skip duplicates" layout="inline" description="Leave out cards whose front you already have.">
-          <Switch aria-label="Skip duplicates" checked={skipDuplicates} onChange={(e) => setSkipDuplicates(e.target.checked)} />
+        <Field
+          label="Skip duplicates"
+          layout="inline"
+          description="Leave out cards whose front you already have."
+        >
+          <Switch
+            aria-label="Skip duplicates"
+            checked={skipDuplicates}
+            onChange={(e) => setSkipDuplicates(e.target.checked)}
+          />
         </Field>
-        {error && <p role="alert" className="text-xs text-status-error">{error}</p>}
+        {error && (
+          <p role="alert" className="text-xs text-status-error">
+            {error}
+          </p>
+        )}
       </DialogBody>
       <DialogFooter
-        aside={<Button variant="ghost" onClick={onBack}>Choose another file</Button>}
+        aside={
+          <Button variant="ghost" onClick={onBack}>
+            Choose another file
+          </Button>
+        }
       >
         <Button
           variant="mono"

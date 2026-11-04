@@ -6,8 +6,8 @@ import { describeImportResult, describePreview } from '../../shared/describe'
 import { countOf } from '../../shared/format'
 import { exportFormatSchema } from '../../shared/payloads-more'
 import { invalid } from '../errors'
-import { exportCollection, parseImport } from '../import'
-import { MAX_UPLOAD_BYTES } from '../routes-files'
+import { parseImportFile } from '../import-file'
+import { exportCollection } from '../import'
 import { findDeck, run, type ToolDeps } from './common'
 
 /** Importing a file by its path, and exporting the collection to one. */
@@ -50,17 +50,14 @@ export function fileTools(deps: ToolDeps) {
       async execute(_id, input) {
         return run(async () => {
           const path = resolvePath(ctx.cwd, input.path)
-          const info = await stat(path).catch(() => null)
-          if (!info?.isFile()) throw invalid(`There is no file at ${path}.`)
-          if (info.size > MAX_UPLOAD_BYTES) throw invalid('That file is larger than 512 MB.')
           let deckId: string | undefined
           if (input.deck) {
             const deck = findDeck(service, input.deck)
             if (!deck) throw invalid(`No deck is called "${input.deck}"; leave deck out to use the file's decks, or make it with recall_save_deck.`)
             deckId = deck.id
           }
-          const bytes = new Uint8Array(await Bun.file(path).arrayBuffer())
-          const batch = await parseImport({ name: path.split('/').pop() ?? path, bytes, mediaDir: service.core.mediaDir })
+          // A preview counts the pictures and sounds and stores none of them.
+          const { batch } = await parseImportFile(service, path, input.dryRun ? 'preview' : 'commit')
           if (input.dryRun) return `Preview (nothing imported):\n${describePreview(service.previewImport(batch))}`
           const result = await service.commitImport(batch, {
             deckId,

@@ -70,7 +70,11 @@ export function BulkDialogs({
       <DialogContent size="sm">
         <DialogHeader>
           <DialogTitle>
-            {moving ? `Move ${countOf(count, 'card')}` : ask === 'tag-add' ? 'Add a tag' : 'Remove a tag'}
+            {moving
+              ? `Move ${countOf(count, 'card')} to…`
+              : ask === 'tag-add'
+                ? `Add a tag to ${countOf(count, 'card')}`
+                : `Remove a tag from ${countOf(count, 'card')}`}
           </DialogTitle>
         </DialogHeader>
         <DialogBody>

@@ -11,19 +11,33 @@ export type BulkAsk = 'move' | 'tag-add' | 'tag-remove' | 'reset' | 'delete'
 /** The actions on the selected cards; the ones that need an answer first open a dialog. */
 export function BulkBar({
   count,
+  total,
+  all,
+  loaded,
   hasDrafts,
   busy,
   onClear,
+  onSelectAll,
   onAsk,
   onRun,
 }: {
+  /** The cards the action applies to. */
   count: number
+  /** How many the list matches in all. */
+  total: number
+  /** Every match is selected, even those not loaded. */
+  all: boolean
+  /** How many rows the list has loaded. */
+  loaded: number
   hasDrafts: boolean
   busy: boolean
   onClear: () => void
+  onSelectAll: () => void
   onAsk: (ask: BulkAsk) => void
   onRun: (action: 'pause' | 'resume' | 'accept') => void
 }) {
+  // More cards match than are loaded: offer every one, as a mail list does.
+  const offer = !all && total > loaded
   const entries: MenuEntry[] = [
     { id: 'tag-add', label: 'Add a tag', icon: Tag, onSelect: () => onAsk('tag-add') },
     { id: 'tag-remove', label: 'Remove a tag', icon: Tags, onSelect: () => onAsk('tag-remove') },
@@ -35,7 +49,12 @@ export function BulkBar({
   return (
     <WorkbenchToolbar aria-label="Actions on selected cards" wrap>
       <WorkbenchToolbarSection wrap>
-        <span className="px-1 text-xs font-medium tabular-nums">{countOf(count, 'card')} selected</span>
+        <span className="px-1 text-xs font-medium tabular-nums">{selectionWords(count, total, all, loaded)}</span>
+        {offer && (
+          <Button size="sm" variant="ghost" disabled={busy} onClick={onSelectAll}>
+            Select all {countOf(total, 'card')}
+          </Button>
+        )}
         <Button size="sm" variant="field" disabled={busy} onClick={() => onAsk('move')}>
           <FolderInput data-icon="inline-start" />
           Move to deck
@@ -70,4 +89,12 @@ export function BulkBar({
       </WorkbenchToolbarSection>
     </WorkbenchToolbar>
   )
+}
+
+/** "All 2,524 cards selected", "50 of 2,524 selected", "All 3 selected" or "2 cards selected". */
+export function selectionWords(count: number, total: number, all: boolean, loaded: number): string {
+  if (all) return `All ${countOf(total, 'card')} selected`
+  if (total > loaded) return `${count.toLocaleString('en-US')} of ${total.toLocaleString('en-US')} selected`
+  if (count === total && total > 1) return `All ${total.toLocaleString('en-US')} selected`
+  return `${countOf(count, 'card')} selected`
 }

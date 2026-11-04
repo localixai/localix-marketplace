@@ -1,6 +1,7 @@
 import { decide, type MiniAppContext, type SemanticIndexHost, type SemanticMatch } from '@localixai/mini-app-sdk/backend'
 import { cardFaces, duplicateKey, plainFront } from '../shared/cloze'
 import { snippet } from '../shared/format'
+import { withoutSounds } from '../shared/sound'
 import { INBOX, type Note, type NoteKind } from '../shared/model'
 import type { CheckAnswerResult, Placement, SimilarHit } from '../shared/payloads'
 import type { Db } from './db'
@@ -31,7 +32,7 @@ export interface JudgeDeps {
 
 /** What the embedding model reads for a note. */
 export function indexText(note: Pick<Note, 'kind' | 'front' | 'back'>): string {
-  return snippet(`${plainFront(note)}\n${note.back}`, 2000)
+  return snippet(`${plainFront(note)}\n${withoutSounds(note.back)}`, 2000)
 }
 
 function ready(semantic: SemanticIndexHost | undefined): semantic is SemanticIndexHost {
@@ -96,7 +97,7 @@ export async function similarTo(
   const exact = deps.core.read((db) => notesWithKeys(db, [duplicateKey({ kind, front: note.front })]))
   const hits: SimilarHit[] = exact
     .filter((hit) => hit.id !== excludeId)
-    .map((hit) => ({ noteId: hit.id, front: snippet(hit.front), deck: hit.deck, score: 1, exact: true }))
+    .map((hit) => ({ noteId: hit.id, front: snippet(withoutSounds(hit.front)), deck: hit.deck, score: 1, exact: true }))
   const matches = await nearest(deps, indexText({ kind, front: note.front, back: note.back ?? '' }), 8)
   if (!matches) return { similar: hits.slice(0, 5), by: 'exact' }
   const close = matches.filter((m) => m.cosine >= SIMILAR_COSINE && m.key !== excludeId && !hits.some((h) => h.noteId === m.key))
@@ -170,7 +171,7 @@ export async function placementFor(deps: JudgeDeps, ids?: readonly string[]): Pr
         sessionId: deps.sessionId,
         purpose: 'recall-placement',
         question: 'Which deck does this flashcard belong in?',
-        state: { front: snippet(plainFront(note), 500), back: snippet(note.back, 500) },
+        state: { front: snippet(plainFront(note), 500), back: snippet(withoutSounds(note.back), 500) },
         options,
         fallback: INBOX,
         confidence: 0.7,
@@ -210,7 +211,7 @@ export async function checkAnswer(deps: JudgeDeps, cardId: string, answer: strin
     sessionId: deps.sessionId,
     purpose: 'recall-typed-answer',
     question: 'Is the typed answer right for this flashcard?',
-    state: { question: snippet(note.front, 500), expected: snippet(expected, 500), typed: snippet(answer, 500) },
+    state: { question: snippet(withoutSounds(note.front), 500), expected: snippet(expected, 500), typed: snippet(answer, 500) },
     options: {
       correct: 'Right: it means the same as the expected answer (spelling slips allowed).',
       partly: 'Partly right: part of the answer is missing or wrong.',

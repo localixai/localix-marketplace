@@ -3,15 +3,28 @@ import { Hono } from 'hono'
 import { jsonError, mediaTypeForPath, resolveWithin, type MiniAppRouteContext } from '@localixai/mini-app-sdk/backend'
 import { api, exportQuerySchema, importCommitQuerySchema, importPreviewQuerySchema } from '../shared/api'
 import { heatmapQuerySchema, statsQuerySchema } from '../shared/payloads-more'
+import { parseImportFile, MAX_UPLOAD_BYTES } from './import-file'
 import { exportCollection, parseImport } from './import'
 import { answer, queryOf, validated, type RouteContext, type RouteDeps } from './route-kit'
 import type { Service } from './service'
 
 /** Decks, stats, settings, media, import and export routes (the table is `shared/api.ts`). */
 
-/** The largest upload an import accepts. */
-export const MAX_UPLOAD_BYTES = 512 * 1024 * 1024
 const MEDIA_FILE = /^[A-Za-z0-9][A-Za-z0-9._-]{0,200}$/
+
+/** The types a browser needs to play a stored sound; the rest come from the host's table. */
+const AUDIO_TYPES: Record<string, string> = {
+  mp3: 'audio/mpeg',
+  m4a: 'audio/mp4',
+  aac: 'audio/aac',
+  ogg: 'audio/ogg',
+  oga: 'audio/ogg',
+  opus: 'audio/ogg',
+  wav: 'audio/wav',
+  flac: 'audio/flac',
+}
+const typeOfMedia = (path: string): string =>
+  AUDIO_TYPES[path.slice(path.lastIndexOf('.') + 1).toLowerCase()] ?? mediaTypeForPath(path) ?? 'application/octet-stream'
 
 const EXTENSIONS = { json: 'json', csv: 'csv', markdown: 'md' } as const
 const TYPES = { json: 'application/json', csv: 'text/csv', markdown: 'text/markdown' } as const
@@ -26,8 +39,8 @@ async function uploaded(c: RouteContext): Promise<Uint8Array | Response> {
 }
 
 /** Parse an uploaded file through the import module. */
-export async function parseUpload(service: Service, name: string, bytes: Uint8Array) {
-  return parseImport({ name, bytes, mediaDir: service.core.mediaDir })
+export async function parseUpload(service: Service, name: string, bytes: Uint8Array, mode: 'commit' | 'preview') {
+  return parseImport({ name, bytes, mediaDir: service.core.mediaDir, mode })
 }
 
 export function fileRoutes(deps: RouteDeps) {
@@ -61,11 +74,11 @@ export function fileRoutes(deps: RouteDeps) {
     .get(api.media.path, async (c) => {
       const file = c.req.param('file')
       const path = MEDIA_FILE.test(file) ? resolveWithin(service.core.mediaDir, file) : null
-      if (!path) return jsonError(c, 404, 'not_found', 'No such image.')
+      if (!path) return jsonError(c, 404, 'not_found', 'No such file.')
       const bytes = await readFile(path).catch(() => null)
-      if (!bytes) return jsonError(c, 404, 'not_found', 'No such image.')
+      if (!bytes) return jsonError(c, 404, 'not_found', 'No such file.')
       return c.body(new Uint8Array(bytes), 200, {
-        'content-type': mediaTypeForPath(path) ?? 'application/octet-stream',
+        'content-type': typeOfMedia(path),
         'cache-control': 'private, max-age=31536000, immutable',
         'x-content-type-options': 'nosniff',
       })
@@ -75,7 +88,7 @@ export function fileRoutes(deps: RouteDeps) {
       if (!query.ok) return query.response
       const bytes = await uploaded(c)
       if (bytes instanceof Response) return bytes
-      return answer(c, async () => service.previewImport(await parseUpload(service, query.value.name, bytes)))
+      return answer(c, async () => service.previewImport(await parseUpload(service, query.value.name, bytes, 'preview')))
     })
     .post(api.importCommit.path, async (c) => {
       const query = queryOf(c, importCommitQuerySchema)
@@ -83,7 +96,17 @@ export function fileRoutes(deps: RouteDeps) {
       const bytes = await uploaded(c)
       if (bytes instanceof Response) return bytes
       const { name, ...options } = query.value
-      return answer(c, async () => service.commitImport(await parseUpload(service, name, bytes), options))
+      return answer(c, async () => service.commitImport(await parseUpload(service, name, bytes, 'commit'), options))
+    })
+    .post(api.importFilePreview.path, validated('json', api.importFilePreview.body), (c) =>
+      answer(c, async () => {
+        const { batch, size } = await parseImportFile(service, c.req.valid('json').path, 'preview')
+        return { ...service.previewImport(batch), bytes: size }
+      }),
+    )
+    .post(api.importFileCommit.path, validated('json', api.importFileCommit.body), (c) => {
+      const { path, ...options } = c.req.valid('json')
+      return answer(c, async () => service.commitImport((await parseImportFile(service, path, 'commit')).batch, options))
     })
     .get(api.export.path, (c) => {
       const query = queryOf(c, exportQuerySchema)

@@ -130,6 +130,8 @@ export const settingsSchema = z.object({
   dailyGoal: z.number().int().min(1).max(5000),
   typedAnswerCheck: z.boolean(),
   suggestPlacement: z.boolean(),
+  /** Play a card's first sound when it appears and the answer's when it is turned over. */
+  autoplaySounds: z.boolean(),
 })
 export type Settings = z.infer<typeof settingsSchema>
 
@@ -141,6 +143,7 @@ export const DEFAULT_SETTINGS: Settings = {
   dailyGoal: 20,
   typedAnswerCheck: false,
   suggestPlacement: true,
+  autoplaySounds: true,
 }
 
 /** A change to the settings: only the fields it names. */
@@ -232,5 +235,6 @@ export const recallExportSchema = z.object({
   notes: z.array(noteSchema),
   cards: z.array(cardSchema),
   reviews: z.array(reviewSchema),
-  settings: settingsSchema,
+  // A backup made before a setting existed has no value for it: it reads as the default.
+  settings: settingsSchema.extend({ autoplaySounds: z.boolean().default(DEFAULT_SETTINGS.autoplaySounds) }),
 })

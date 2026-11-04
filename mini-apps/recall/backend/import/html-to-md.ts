@@ -13,11 +13,17 @@ export interface HtmlToMarkdownOptions {
    * `null` to drop it. Without it every image is dropped.
    */
   image?: (src: string) => string | null
+  /**
+   * The URL a sound's name (`[sound:x]`, `<audio src>`) becomes: `media/<file>`, or `null` to drop
+   * it. A kept sound is written as `[audio](media/<file>)` on a line of its own. Without it every
+   * sound is dropped.
+   */
+  sound?: (src: string) => string | null
 }
 
 export interface HtmlToMarkdownResult {
   markdown: string
-  /** `[sound:…]` tags and `<audio>` elements dropped. */
+  /** `[sound:…]` tags and `<audio>` elements dropped (not kept by the `sound` option). */
   sounds: number
   /** `<video>` elements dropped. */
   videos: number
@@ -35,6 +41,7 @@ type Node = string | Element
 interface Context extends HtmlToMarkdownOptions {
   pres: string[]
   images: number
+  sounds: number
   bold: boolean
   italic: boolean
 }
@@ -49,7 +56,7 @@ const PRE = '\u0006'
 
 const VOID = new Set(['br', 'img', 'hr', 'wbr', 'input', 'meta', 'link', 'source', 'track', 'col', 'area', 'base', 'param', 'embed'])
 const BLOCKS = new Set(['div', 'section', 'article', 'header', 'footer', 'main', 'aside', 'nav', 'figure', 'figcaption', 'address', 'dl', 'dt', 'dd', 'center', 'form', 'fieldset', 'details', 'summary', 'table', 'thead', 'tbody', 'tfoot', 'caption'])
-const DROPPED = 'script|style|title|head|template|noscript|iframe|object|textarea|select|svg|math|canvas|audio|video'
+const DROPPED = 'script|style|title|head|template|noscript|iframe|object|textarea|select|svg|math|canvas|video'
 const MAX_DEPTH = 100
 
 const TAG = /<(\/?)([A-Za-z][A-Za-z0-9:-]*)((?:[^>"']|"[^"]*"|'[^']*')*)>/g
@@ -229,6 +236,16 @@ function renderNode(node: Node, context: Context): string {
     context.italic = false
     return wrapInline(inner, '*')
   }
+  if (tag === 'audio') {
+    const source = node.children.find((child): child is Element => typeof child !== 'string' && child.tag === 'source')
+    const src = (node.attrs.src ?? source?.attrs.src ?? '').trim()
+    const url = src ? (context.sound?.(src) ?? null) : null
+    if (!url) {
+      context.sounds++
+      return ''
+    }
+    return `${BLOCK}[audio](${encodeUrl(url)})${BLOCK}`
+  }
   if (tag === 'img') {
     const src = node.attrs.src ?? ''
     const url = src ? (context.image?.(src) ?? null) : null
@@ -278,20 +295,18 @@ function finalize(source: string, context: Context, top: boolean): string {
 }
 
 export function htmlToMarkdown(html: string, options: HtmlToMarkdownOptions = {}): HtmlToMarkdownResult {
-  let sounds = 0
-  let videos = 0
-  let source = html.replace(/\[sound:[^\]]*\]/g, () => {
-    sounds++
-    return ''
-  })
-  sounds += (source.match(/<audio\b/gi) ?? []).length
-  videos += (source.match(/<video\b/gi) ?? []).length
+  // A `[sound:x]` tag is an `<audio>` element from here on, so both are handled in one place.
+  let source = html.replace(
+    /\[sound:([^\]]*)\]/g,
+    (_tag, name: string) => `<audio src="${name.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;')}"></audio>`,
+  )
+  const videos = (source.match(/<video\b/gi) ?? []).length
   source = source
     .replace(/<!--[\s\S]*?(-->|$)|<!\[CDATA\[[\s\S]*?(\]\]>|$)|<![^>]*>|<\?[^>]*>/g, '')
     .replace(new RegExp(`<(${DROPPED})\\b[^>]*>[\\s\\S]*?</\\1\\s*>`, 'gi'), '')
     .replace(/<(script|style)\b[\s\S]*$/i, '')
     .replace(/[\u0000-\u0008\u000b\u000e-\u001f]/g, '')
-  const context: Context = { ...options, pres: [], images: 0, bold: false, italic: false }
+  const context: Context = { ...options, pres: [], images: 0, sounds: 0, bold: false, italic: false }
   const markdown = finalize(renderNode(parse(source), context), context, true)
-  return { markdown, sounds, videos, images: context.images }
+  return { markdown, sounds: context.sounds, videos, images: context.images }
 }

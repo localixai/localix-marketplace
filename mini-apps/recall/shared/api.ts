@@ -39,6 +39,9 @@ import {
   exportFormatSchema,
   heatmapQuerySchema,
   heatmapSchema,
+  importFileCommitSchema,
+  importFilePathSchema,
+  importFilePreviewSchema,
   importOptionsSchema,
   importPreviewSchema,
   importResultSchema,
@@ -55,6 +58,7 @@ import {
  *
  * - `query`: a GET's parameters, encoded by `toQuery` (arrays comma-joined) and read by `fromQuery`.
  * - `body`: a JSON body; `'bytes'` is the raw file as `application/octet-stream`.
+ *   The `/import/file/*` routes take the file's full path instead: the app reads it from disk.
  * - `response`: the JSON answer; `'bytes'` is a file (an image), `'download'` an attachment.
  * - An error answers `{ error: { code, message } }` with 400/404/409/422 (`unwrapMiniAppResponse`).
  */
@@ -129,6 +133,18 @@ export const api = {
     path: '/import/commit',
     query: importCommitQuerySchema,
     body: 'bytes',
+    response: importResultSchema,
+  },
+  importFilePreview: {
+    method: 'POST',
+    path: '/import/file/preview',
+    body: importFilePathSchema,
+    response: importFilePreviewSchema,
+  },
+  importFileCommit: {
+    method: 'POST',
+    path: '/import/file/commit',
+    body: importFileCommitSchema,
     response: importResultSchema,
   },
   export: { method: 'GET', path: '/export', query: exportQuerySchema, response: 'download' },

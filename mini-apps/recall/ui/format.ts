@@ -1,5 +1,17 @@
 import { formatMoment } from '../shared/format'
 
+/** 2524 → "2,524". */
+export const numberLabel = (value: number): string => value.toLocaleString('en-US')
+
+/** 108003328 → "103 MB"; small sizes keep a decimal ("4.2 MB"), tiny ones are in KB. */
+export function bytesLabel(bytes: number): string {
+  const mb = bytes / (1024 * 1024)
+  if (mb >= 1024) return `${(mb / 1024).toFixed(1)} GB`
+  if (mb >= 10) return `${Math.round(mb)} MB`
+  if (mb >= 1) return `${mb.toFixed(1)} MB`
+  return `${Math.max(1, Math.round(bytes / 1024))} KB`
+}
+
 /** The screen's clock: the person's zone and the host's wall time, read once per call. */
 export const utcOffset = (): number => -new Date().getTimezoneOffset()
 

@@ -21,6 +21,8 @@ export function queryOf(filters: CardsFilters, q: string): LibraryQuery {
 }
 
 export interface Library {
+  /** The query the list is showing: what a bulk action over "all matching" sends. */
+  query: LibraryQuery
   rows: LibraryRow[]
   total: number
   /** How the last search was matched, when there was one. */
@@ -73,6 +75,7 @@ export function useLibrary(filters: CardsFilters, active: boolean): Library {
   const showMore = useCallback(() => setPaging({ key, pages: pages + 1 }), [key, pages])
   const refresh = useCallback(() => setAgain((n) => n + 1), [])
   return {
+    query,
     rows: state?.rows ?? [],
     total: state?.total ?? 0,
     by: state?.by ?? null,

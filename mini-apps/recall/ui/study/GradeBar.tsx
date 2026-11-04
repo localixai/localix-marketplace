@@ -1,5 +1,4 @@
 import { Button } from '@localixai/kit/button'
-import { Kbd } from '@localixai/kit/kbd'
 import { RATING_NAMES, type Rating, type Settings } from '../../shared/model'
 import type { StudyCard } from '../../shared/payloads'
 
@@ -10,6 +9,9 @@ export const ratingsFor = (buttons: Settings['buttons']): readonly Rating[] =>
 /** The key that answers with a rating: its place in the row (1, 2, 3, 4). */
 export const keyFor = (buttons: Settings['buttons'], rating: Rating): string =>
   String(ratingsFor(buttons).indexOf(rating) + 1)
+
+/** One quiet line for every study action: the same height and weight for the answer and the grades. */
+export const ACTION_CLASS = 'recall-action h-10 gap-2'
 
 export function GradeBar({
   card,
@@ -25,26 +27,30 @@ export function GradeBar({
   busy: boolean
   onGrade: (rating: Rating) => void
 }) {
+  // Good is the default answer, so it is the one with a stronger outline; a typed check moves it.
   const main = (rating: Rating) => suggested === rating || (suggested === null && rating === 3)
   return (
-    <div role="group" aria-label="How well did you remember?" className="grid w-full grid-flow-col auto-cols-fr gap-2 @md:max-w-xl">
+    <div
+      role="group"
+      aria-label="How well did you remember?"
+      className="flex w-full gap-2 @md:max-w-md"
+    >
       {ratingsFor(buttons).map((rating) => (
         <Button
           key={rating}
           size="xl"
-          variant={main(rating) ? 'mono' : rating === 1 ? 'field' : 'secondary'}
-          recommended={suggested === rating}
+          variant={rating === 1 ? 'ghost' : 'secondary'}
           disabled={busy}
-          className="recall-grade h-auto flex-col gap-0.5 py-2"
+          className={`${ACTION_CLASS} recall-grade min-w-0 flex-1`}
+          data-main={main(rating) ? 'true' : undefined}
           data-suggested={suggested === rating}
           aria-label={`${RATING_NAMES[rating]}, back in ${card.outcomes[String(rating) as '1'].label}`}
           onClick={() => onGrade(rating)}
         >
-          <span className="font-medium">{RATING_NAMES[rating]}</span>
-          <span className="text-2xs font-normal tabular-nums opacity-75">
+          <span>{RATING_NAMES[rating]}</span>
+          <span className="recall-grade-when text-xs font-normal tabular-nums">
             {card.outcomes[String(rating) as '1'].label}
           </span>
-          <Kbd className="hidden @2xl:inline-flex">{keyFor(buttons, rating)}</Kbd>
         </Button>
       ))}
     </div>

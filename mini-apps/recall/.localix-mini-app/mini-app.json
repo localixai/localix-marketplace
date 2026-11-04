@@ -1,7 +1,7 @@
 {
   "name": "recall",
   "displayName": "Recall",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Spaced-repetition flashcards: study on the screen, and let the agent make cards from your notes and files, quiz you, explain misses and manage your decks. Imports Anki, CSV and Markdown.",
   "author": {
     "name": "Localix"
@@ -30,7 +30,7 @@
     },
     {
       "path": "./screenshots/study.png",
-      "caption": "Studying a card, with a keyboard shortcut for every answer"
+      "caption": "Studying an imported Anki deck: hear the word, answer with one key"
     },
     {
       "path": "./screenshots/cards.png",
@@ -44,6 +44,17 @@
   "surfaces": [
     "agent",
     "workbench"
+  ],
+  "fileAssociations": [
+    {
+      "ext": [
+        "apkg",
+        "colpkg"
+      ],
+      "name": "Anki deck",
+      "description": "An Anki deck: see what is inside and import it into Recall",
+      "role": "Viewer"
+    }
   ],
   "backend": "./backend/index.ts"
 }

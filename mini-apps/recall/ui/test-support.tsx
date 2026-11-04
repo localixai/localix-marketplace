@@ -1,4 +1,4 @@
-import { afterAll, afterEach, beforeAll } from "bun:test";
+import { afterAll, afterEach, beforeAll, beforeEach } from "bun:test";
 import { formatChordText } from "@localixai/kit/keybindings";
 import { registerDom } from "@localixai/kit/testing";
 import type { PublishedMessageContext } from "@localixai/mini-app-sdk/ui";
@@ -6,6 +6,7 @@ import {
   bindMiniAppUiRuntime,
   type MiniAppComposerInsert,
   type MiniAppUiRuntime,
+  type MiniAppWorkItemRequest,
 } from "@localixai/mini-app-sdk/ui/runtime";
 import { bindMiniAppUiTestDoubles } from "@localixai/mini-app-sdk/ui/testing";
 import { bindMiniAppUiTransport } from "@localixai/mini-app-sdk/ui/transport";
@@ -18,7 +19,7 @@ import type {
   SimilarHit,
   StudyCard,
 } from "../shared/payloads";
-import type { ImportPreview, ImportResult } from "../shared/payloads-more";
+import type { ImportFilePreview, ImportPreview, ImportResult } from "../shared/payloads-more";
 import { DEBOUNCE } from "./data";
 import * as fx from "./test-fixtures";
 import { click } from "./test-dom";
@@ -51,6 +52,55 @@ export function setupDom(): void {
   });
 }
 
+/** An `Audio` that plays nothing and remembers what it was asked: sources, plays and pauses. */
+export class FakeAudio {
+  static instances: FakeAudio[] = []
+  paused = true
+  plays = 0
+  currentTime = 0
+  private readonly listeners = new Map<string, (() => void)[]>()
+  constructor(readonly src: string) {
+    FakeAudio.instances.push(this)
+  }
+  play(): Promise<void> {
+    this.paused = false
+    this.plays += 1
+    return Promise.resolve()
+  }
+  pause(): void {
+    this.paused = true
+  }
+  addEventListener(type: string, listener: () => void): void {
+    this.listeners.set(type, [...(this.listeners.get(type) ?? []), listener])
+  }
+  removeEventListener(): void {}
+  /** The sound ran to its end. */
+  end(): void {
+    this.paused = true
+    for (const listener of this.listeners.get('ended') ?? []) listener()
+  }
+  /** The files played so far, in order, by the name after `media/`. */
+  static played(): string[] {
+    return FakeAudio.instances.filter((audio) => audio.plays > 0).map((audio) => audio.src.split('/media/')[1] ?? audio.src)
+  }
+}
+
+/** Put the fake in place of the page's `Audio` for the file's tests; each test starts with no sounds. */
+export function setupFakeAudio(): void {
+  const env = globalThis as unknown as { Audio: unknown }
+  let original: unknown
+  beforeAll(() => {
+    original = env.Audio
+  })
+  beforeEach(() => {
+    FakeAudio.instances = []
+    env.Audio = FakeAudio
+  })
+  afterEach(() => {
+    env.Audio = original
+  })
+}
+
 export interface Call {
   method: string;
   name: RouteName;
@@ -73,6 +123,13 @@ export interface Fake {
   check: CheckAnswerResult;
   preview: ImportPreview;
   imported: ImportResult;
+  /** What an Anki file on disk holds, and what importing it does. */
+  filePreview: ImportFilePreview;
+  fileImported: ImportResult;
+  /** The work items the screen asked the host to open. */
+  opened: MiniAppWorkItemRequest[];
+  /** While set, importing a file waits for it. */
+  hold: Promise<void> | null;
   becameHard: boolean;
   undo?: StudyCard;
   /** What the screen put in the chat composer, and the files it saved. */
@@ -94,7 +151,7 @@ const routes = (Object.keys(api) as RouteName[]).map((name) => ({
 }));
 
 const NO_SESSIONS: never[] = [];
-const ASKS: RouteName[] = ["similar", "placement", "studyCheck", "importPreview"];
+const ASKS: RouteName[] = ["similar", "placement", "studyCheck", "importPreview", "importFilePreview"];
 const json = (status: number, body: unknown) => Response.json(body, { status });
 const review = (card: StudyCard, rating: 1 | 2 | 3 | 4): Review => ({
   id: `r-${card.card.id}`,
@@ -142,6 +199,9 @@ export function bindBackend(init: Partial<Fake> = {}): Fake {
       duplicates: 1,
       withProgress: 0,
       media: 0,
+      pictures: 0,
+      sounds: 0,
+      notices: [],
       warnings: ["One row had no back."],
       sample: [{ kind: "basic", front: "Hola", back: "Hello" }],
     },
@@ -153,9 +213,14 @@ export function bindBackend(init: Partial<Fake> = {}): Fake {
       decksCreated: [],
       status: "draft",
       reviewsReplayed: 0,
+      notices: [],
       warnings: [],
       decks: [{ id: "d1", name: "Spanish", color: 1, notes: 2 }],
     },
+    filePreview: { ...fx.ankiPreview(), bytes: 103 * 1024 * 1024 },
+    fileImported: fx.ankiImported(),
+    opened: [],
+    hold: null,
     becameHard: false,
     composer: [],
     saved: [],
@@ -217,6 +282,11 @@ export function bindBackend(init: Partial<Fake> = {}): Fake {
       return { note: r.note, cards: [], similar: fake.similar };
     },
     bulk: (c) => {
+      if (c.body.match) {
+        const affected = c.body.expect;
+        if (c.body.action === "delete") fake.rows = [];
+        return { affected, message: `Done: ${c.body.action}.` };
+      }
       if (c.body.action === "delete")
         fake.rows = fake.rows.filter((r) => !c.body.ids.includes(r.note.id));
       return { affected: c.body.ids.length, message: `Done: ${c.body.action}.` };
@@ -260,6 +330,8 @@ export function bindBackend(init: Partial<Fake> = {}): Fake {
     studySkip: (c) => (fake.queue.shift(), handlers.studyNext!(c, [])),
     importPreview: () => fake.preview,
     importCommit: () => fake.imported,
+    importFilePreview: () => fake.filePreview,
+    importFileCommit: async () => (await fake.hold, fake.fileImported),
     deckCreate: (c) => fx.deck("d9", c.body.name, { color: c.body.color }),
     deckRemove: (_c, p) => ({ removed: p[0]!, moved: 1, deleted: 0 }),
   };
@@ -267,6 +339,7 @@ export function bindBackend(init: Partial<Fake> = {}): Fake {
     composer: { insert: (request: MiniAppComposerInsert) => void fake.composer.push(request) },
     sessions: { list: () => NO_SESSIONS, subscribe: () => () => {} },
     files: { saveBlob: (name: string) => void fake.saved.push(name) },
+    workspace: { openWorkItem: (request: MiniAppWorkItemRequest) => void fake.opened.push(request) },
   } as unknown as MiniAppUiRuntime);
   const unbindTransport = bindMiniAppUiTransport({
     url: (path) => path,
@@ -296,7 +369,7 @@ export function bindBackend(init: Partial<Fake> = {}): Fake {
         return json(500, { error: { code: "down", message: "Backend is down." } });
       const refusal = fake.refuse[hit.name];
       if (refusal) return json(409, { error: { code: "refused", message: refusal } });
-      const answer = handlers[hit.name]?.(call, hit.re.exec(pathname!)!.slice(1));
+      const answer = await handlers[hit.name]?.(call, hit.re.exec(pathname!)!.slice(1));
       return answer instanceof Response ? answer : json(200, answer ?? {});
     },
   });
@@ -341,10 +414,14 @@ async function within<T>(work: Promise<T>, step: string): Promise<T> {
 }
 
 /** Mount the whole screen against the fake backend, as the host does. */
-export async function mount(init: Partial<Fake> = {}): Promise<Mounted> {
+export async function mount(
+  init: Partial<Fake> = {},
+  options: { file?: string } = {},
+): Promise<Mounted> {
   const { act } = await import("react");
   const { createRoot } = await import("react-dom/client");
   const { App } = await import("./App");
+  const { AnkiFileTab } = await import("./import/AnkiFileTab");
   try {
     localStorage.clear();
   } catch {
@@ -377,7 +454,17 @@ export async function mount(init: Partial<Fake> = {}): Promise<Mounted> {
   leftovers.add(unmount);
   await within(
     act(async () =>
-      root.render(<App active publishMessageContext={(context) => contexts.push(context)} />),
+      root.render(
+        options.file ? (
+          <AnkiFileTab
+            sessionId="s1"
+            path={options.file}
+            publishMessageContext={(context) => contexts.push(context)}
+          />
+        ) : (
+          <App active publishMessageContext={(context) => contexts.push(context)} />
+        ),
+      ),
     ),
     "rendering the screen",
   );

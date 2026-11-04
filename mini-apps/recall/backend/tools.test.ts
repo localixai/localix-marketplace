@@ -1,8 +1,9 @@
 import { describe, expect, test } from 'bun:test'
-import { mkdirSync, readFileSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { callTool } from '@localixai/mini-app-sdk/backend/testing'
 import type { LibraryPage } from '../shared/payloads'
+import { buildApkg, greekDeck } from './import/test-support'
 import { addReady, recallApp, route } from './test-support'
 
 /** Every agent tool, called as the agent calls it, and what it is told back. */
@@ -149,6 +150,25 @@ describe('the agent tools', () => {
     expect(preview.text).toContain('Preview (nothing imported)')
     const imported = await callTool(other.app, 'recall_import_file', { path: join(other.dataDir, 'backup.json') })
     expect(imported.text).toContain('Imported 1 note')
+  })
+
+  test('importing a deck with sound previews without writing it, and says how many sounds', async () => {
+    await using ctx = await recallApp()
+    const { fixture, media, names } = greekDeck(10)
+    const path = join(ctx.dataDir, 'greek.apkg')
+    mkdirSync(ctx.dataDir, { recursive: true })
+    writeFileSync(path, buildApkg('old', { fixture, media, mediaNames: names }))
+    const preview = await callTool(ctx.app, 'recall_import_file', { path, dryRun: true })
+    expect(preview.text).toContain('20 sounds')
+    expect(existsSync(join(ctx.dataDir, 'media'))).toBe(false)
+    const imported = await callTool(ctx.app, 'recall_import_file', { path, draft: false })
+    expect(imported.text).toContain('Imported 10 notes (20 cards)')
+    expect(readdirSync(join(ctx.dataDir, 'media'))).toHaveLength(20)
+    // The agent reads a note with its sound as "(sound)", never as a link it cannot follow.
+    const found = await callTool(ctx.app, 'recall_find_cards', { query: 'λέξη1' })
+    expect(found.text).not.toContain('media/')
+    expect(found.text).not.toContain('[audio]')
+    expect(found.text).toContain('(sound)')
   })
 
   test('import says when there is no file, and does nothing', async () => {

@@ -44,6 +44,17 @@ describe('htmlToMarkdown', () => {
     expect(result).toEqual({ markdown: 'word', sounds: 3, videos: 1, images: 0 })
   })
 
+  test('a sound the resolver keeps becomes an audio link on a line of its own; the others are counted', () => {
+    const sound = (src: string) => (src === 'a.mp3' || src === 'c.mp3' ? `media/${src}` : null)
+    const result = htmlToMarkdown('word [sound:a.mp3] more [sound:b.mp3]<audio controls><source src="c.mp3"></audio>', { sound })
+    expect(result).toEqual({ markdown: 'word\n[audio](media/a.mp3)\nmore\n[audio](media/c.mp3)', sounds: 1, videos: 0, images: 0 })
+  })
+
+  test('a sound name with quotes or markup stays one safe link or none', () => {
+    const sound = (src: string) => (src === 'a"b<c>.mp3' ? 'media/x.mp3' : null)
+    expect(htmlToMarkdown('[sound:a"b<c>.mp3]', { sound }).markdown).toBe('[audio](media/x.mp3)')
+  })
+
   test('images go through the resolver; dropped ones are counted', () => {
     const resolve = (src: string) => (src === 'cat.jpg' ? 'media/abc.jpg' : src.startsWith('https:') ? src : null)
     const result = htmlToMarkdown('<img src="cat.jpg" alt="a cat"><img src="dog.jpg"><img src="https://x.test/p.png">', {

@@ -54,6 +54,22 @@ test('buttons, switches and the day start each save just that setting', async ()
   }
 })
 
+test('Studying has "Play sounds by themselves", on by default, and turning it off saves just that', async () => {
+  const screen = await openSettings()
+  try {
+    const studying = page(screen).querySelector('section[aria-labelledby="settings-studying"]')!
+    const sounds = byLabel<HTMLInputElement>('Play sounds by themselves')
+    expect(sounds.checked).toBe(true)
+    expect(studying.contains(sounds)).toBe(true)
+    await screen.act(async () => click(sounds))
+    await screen.settle()
+    expect(screen.fake.writes.map((w) => w.body)).toEqual([{ autoplaySounds: false }])
+    expect(byLabel<HTMLInputElement>('Play sounds by themselves').checked).toBe(false)
+  } finally {
+    await screen.unmount()
+  }
+})
+
 test('a number saves when its field is left, and a bad one is explained and not sent', async () => {
   const screen = await openSettings()
   try {

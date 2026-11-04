@@ -1,7 +1,7 @@
 import type { Card, Note } from '../shared/model'
 import { DEFAULT_SETTINGS } from '../shared/model'
 import type { DeckSummary, LibraryRow, NoteDetail, StudyCard, TodaySummary } from '../shared/payloads'
-import type { Heatmap, SettingsResult, Stats } from '../shared/payloads-more'
+import type { Heatmap, ImportFilePreview, ImportResult, SettingsResult, Stats } from '../shared/payloads-more'
 
 /** Small builders for the screen's tests: the same shapes the backend answers, with sane defaults. */
 
@@ -146,5 +146,44 @@ export const stats = (over: Partial<Stats> = {}): Stats => ({
   hardest: [row('h1', 'Subjunctive trigger', {}, { lapses: 9, leech: true })],
   time: { todayMs: 600_000, last30Ms: 7_200_000, averageMs: 9000 },
   totals: { notes: 200, cards: 230, reviews: 1500 },
+  ...over,
+})
+
+/** The Greek deck as the file preview sees it: one deck, all sound, a clip left out. */
+export const ankiPreview = (over: Partial<ImportFilePreview> = {}): ImportFilePreview => ({
+  source: 'Learning_Greek.apkg',
+  format: 'apkg',
+  notes: 2524,
+  cards: 5048,
+  decks: [{ name: 'Learning Greek for Beginners', notes: 2524, exists: false }],
+  duplicates: 0,
+  withProgress: 0,
+  media: 5043,
+  pictures: 0,
+  sounds: 5043,
+  warnings: [],
+  notices: ['A silent clip on every card was left out.', 'No study history in the file, so every card starts as new.'],
+  sample: [
+    { kind: 'reversed', front: '1\\. να', back: 'so (that), to' },
+    { kind: 'reversed', front: '2\\. ο', back: 'the' },
+    { kind: 'reversed', front: '3\\. δε(ν)', back: 'no, not' },
+    { kind: 'reversed', front: '4\\. και', back: 'and' },
+    { kind: 'reversed', front: '5\\. η', back: 'the (feminine)' },
+  ],
+  bytes: 103 * 1024 * 1024,
+  ...over,
+})
+
+export const ankiImported = (over: Partial<ImportResult> = {}): ImportResult => ({
+  source: 'Learning_Greek.apkg',
+  added: 2524,
+  cards: 5048,
+  skippedDuplicates: 0,
+  decksCreated: ['Learning Greek for Beginners'],
+  status: 'active',
+  reviewsReplayed: 0,
+  warnings: [],
+  notices: [],
+  decks: [{ id: 'd7', name: 'Learning Greek for Beginners', color: 3, notes: 2524 }],
   ...over,
 })

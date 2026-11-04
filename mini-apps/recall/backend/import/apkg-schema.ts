@@ -1,6 +1,6 @@
 import { Database } from 'bun:sqlite'
 import { ImportError } from './common'
-import { protoNumber, readProto } from './protobuf'
+import { protoNumber, protoString, readProto } from './protobuf'
 
 /**
  * Reads an Anki collection database (any schema: the old one keeps note types and decks as JSON in
@@ -8,11 +8,18 @@ import { protoNumber, readProto } from './protobuf'
  * every column is read as data.
  */
 
+export interface CardTemplate {
+  name: string
+  /** The question side's format, e.g. `{{Front}}`; empty when the file does not hold one. */
+  question: string
+  answer: string
+}
 export interface NoteType {
   name: string
   cloze: boolean
-  fields: number
-  templates: number
+  /** Field names, in the order a note's fields come. */
+  fields: string[]
+  templates: CardTemplate[]
 }
 export interface AnkiNote {
   id: number
@@ -26,6 +33,8 @@ export interface AnkiCard {
   did: number
   ord: number
   queue: number
+  /** Where a new card waits in Anki's new queue; `null` for a card that is not new. */
+  newPosition: number | null
 }
 export interface AnkiCollection {
   noteTypes: Map<number, NoteType>
@@ -66,32 +75,42 @@ function readNoteTypes(db: Database): Map<number, NoteType> {
   if (!hasTable(db, 'notetypes')) {
     const col = db.query('SELECT models FROM col').get() as Row | null
     for (const [id, model] of Object.entries(json(col?.models))) {
+      const list = (value: unknown): Row[] => (Array.isArray(value) ? (value as Row[]) : [])
       types.set(Number(id), {
         name: text(model.name),
         cloze: num(model.type) === 1,
-        fields: Array.isArray(model.flds) ? model.flds.length : 0,
-        templates: Array.isArray(model.tmpls) ? model.tmpls.length : 0,
+        fields: list(model.flds).map((field) => text(field?.name)),
+        templates: list(model.tmpls).map((template) => ({
+          name: text(template?.name),
+          question: text(template?.qfmt),
+          answer: text(template?.afmt),
+        })),
       })
     }
     return types
   }
-  const count = (table: string) => {
-    const counts = new Map<number, number>()
-    for (const row of db.query(`SELECT ntid, COUNT(*) AS n FROM ${table} GROUP BY ntid`).all() as Row[]) {
-      counts.set(num(row.ntid), num(row.n))
-    }
-    return counts
+  const fields = new Map<number, string[]>()
+  for (const row of db.query('SELECT ntid, name FROM fields ORDER BY ntid, ord').all() as Row[]) {
+    const list = fields.get(num(row.ntid)) ?? []
+    list.push(text(row.name))
+    fields.set(num(row.ntid), list)
   }
-  const fields = count('fields')
-  const templates = count('templates')
+  const templates = new Map<number, CardTemplate[]>()
+  for (const row of db.query('SELECT ntid, name, config FROM templates ORDER BY ntid, ord').all() as Row[]) {
+    // A template's config is a protobuf: the question format is field 1, the answer format field 2.
+    const config = row.config instanceof Uint8Array ? readProto(row.config) : new Map()
+    const list = templates.get(num(row.ntid)) ?? []
+    list.push({ name: text(row.name), question: protoString(config, 1), answer: protoString(config, 2) })
+    templates.set(num(row.ntid), list)
+  }
   for (const row of db.query('SELECT id, name, config FROM notetypes').all() as Row[]) {
     const config = row.config instanceof Uint8Array ? readProto(row.config) : new Map()
     const id = num(row.id)
     types.set(id, {
       name: text(row.name),
       cloze: protoNumber(config, 1) === 1,
-      fields: fields.get(id) ?? 0,
-      templates: templates.get(id) ?? 0,
+      fields: fields.get(id) ?? [],
+      templates: templates.get(id) ?? [],
     })
   }
   return types
@@ -115,13 +134,13 @@ function readDecks(db: Database): AnkiCollection['decks'] {
 export function readCollection(db: Database): AnkiCollection {
   try {
     db.run('PRAGMA trusted_schema = OFF')
-    const notes = (db.query('SELECT id, mid, tags, flds FROM notes').all() as Row[]).map((row) => ({
+    const notes = (db.query('SELECT id, mid, tags, flds FROM notes ORDER BY id').all() as Row[]).map((row) => ({
       id: num(row.id),
       mid: num(row.mid),
       tags: text(row.tags),
       fields: text(row.flds).split('\u001f'),
     }))
-    const cards = (db.query('SELECT id, nid, did, odid, ord, queue FROM cards ORDER BY nid, ord').all() as Row[]).map(
+    const cards = (db.query('SELECT id, nid, did, odid, ord, queue, type, due, odue FROM cards ORDER BY nid, ord').all() as Row[]).map(
       (row) => ({
         id: num(row.id),
         nid: num(row.nid),
@@ -129,6 +148,8 @@ export function readCollection(db: Database): AnkiCollection {
         did: num(row.odid) || num(row.did),
         ord: num(row.ord),
         queue: num(row.queue),
+        // A new card's `due` is its place in the new queue (`odue` while it sits in a filtered deck).
+        newPosition: num(row.type) === 0 ? (num(row.odid) ? num(row.odue) : num(row.due)) : null,
       }),
     )
     return { noteTypes: readNoteTypes(db), decks: readDecks(db), notes, cards }

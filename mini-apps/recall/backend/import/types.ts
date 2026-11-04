@@ -31,6 +31,12 @@ export interface ImportBatch {
   notes: ImportedNote[]
   /** Media already written to `<dataDir>/media/<sha256>.<ext>`; notes reference `media/<file>`. */
   media: { original: string; file: string }[]
-  /** "3 sounds dropped", "12 empty rows skipped". */
+  /** Pictures and sounds the notes use, each file once (a preview counts them without writing). */
+  mediaCounts: { pictures: number; sounds: number }
+  /** A preview: no media was written, so this batch must not be committed. */
+  preview?: true
+  /** Something was lost or skipped: "3 sounds dropped", "12 empty rows skipped". */
   warnings: string[]
+  /** Plain information, no problem: "No study history in the file". */
+  notices: string[]
 }

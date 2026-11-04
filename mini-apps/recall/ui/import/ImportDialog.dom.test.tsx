@@ -22,7 +22,9 @@ test('choosing a file shows what is in it before anything is imported', async ()
   const { screen, dialog } = await openImport()
   try {
     expect(dialog().textContent).toContain('Drop a file here')
-    expect(byLabel<HTMLInputElement>('Choose a file to import').accept).toBe('.apkg,.colpkg,.csv,.tsv,.txt,.md,.json')
+    expect(byLabel<HTMLInputElement>('Choose a file to import').accept).toBe(
+      '.apkg,.colpkg,.csv,.tsv,.txt,.md,.json',
+    )
     await choose(screen, 'spanish.csv')
 
     const text = dialog().textContent!
@@ -32,7 +34,9 @@ test('choosing a file shows what is in it before anything is imported', async ()
     expect(text).toContain('Spanish')
     expect(text).toContain('One row had no back.')
     expect(text).toContain('Hola')
-    expect(screen.fake.calls.find((c) => c.name === 'importPreview')!.query.get('name')).toBe('spanish.csv')
+    expect(screen.fake.calls.find((c) => c.name === 'importPreview')!.query.get('name')).toBe(
+      'spanish.csv',
+    )
     expect(screen.fake.writes).toHaveLength(0)
   } finally {
     await screen.unmount()
@@ -45,7 +49,9 @@ test('Import sends the options, shows the result and Open imported cards lands o
   try {
     await choose(screen, 'spanish.csv')
     // Defaults: drafts, skip duplicates. Choose the deck and ready cards.
-    await screen.act(async () => click(byText('Ready to study', '*', byLabel('Start as', dialog()))))
+    await screen.act(async () =>
+      click(byText('Ready to study', '*', byLabel('Start as', dialog()))),
+    )
     await screen.act(async () => click(byText('Import 3 notes', 'button', dialog())))
     await screen.settle()
 
@@ -62,20 +68,26 @@ test('Import sends the options, shows the result and Open imported cards lands o
     await screen.act(async () => click(byText('Open imported cards', 'button', dialog())))
     await screen.settle()
     expect(document.body.querySelector('[role="dialog"]')).toBeNull()
-    expect(screen.container.querySelector('[role="tab"][aria-selected="true"]')?.textContent).toContain('Cards')
+    expect(
+      screen.container.querySelector('[role="tab"][aria-selected="true"]')?.textContent,
+    ).toContain('Cards')
   } finally {
     await screen.unmount()
   }
 })
 
 test('an Anki file offers to keep its progress; the choice is sent', async () => {
-  const { screen, dialog } = await openImport({ preview: { ...fx_preview(), withProgress: 40, format: 'apkg' } })
+  const { screen, dialog } = await openImport({
+    preview: { ...fx_preview(), withProgress: 40, format: 'apkg' },
+  })
   try {
     await choose(screen, 'deck.apkg')
     await screen.act(async () => click(byLabel('Keep Anki progress', dialog())))
     await screen.act(async () => click(byText('Import 3 notes', 'button', dialog())))
     await screen.settle()
-    expect(screen.fake.calls.find((c) => c.name === 'importCommit')!.query.get('keepProgress')).toBe('false')
+    expect(
+      screen.fake.calls.find((c) => c.name === 'importCommit')!.query.get('keepProgress'),
+    ).toBe('false')
   } finally {
     await screen.unmount()
   }
@@ -118,6 +130,9 @@ function fx_preview() {
     duplicates: 0,
     withProgress: 0,
     media: 0,
+    pictures: 0,
+    sounds: 0,
+    notices: [],
     warnings: [],
     sample: [],
   }

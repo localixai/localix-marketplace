@@ -63,7 +63,7 @@ function collection(notes: [string, string, string, string[]][]): RecallExport {
     })),
     cards: notes.map((_, index) => ({ ...memory, id: `c${index}`, noteId: `n${index}`, variant: 'forward' })),
     reviews: [],
-    settings: { retention: 0.9, newPerDay: 20, buttons: 'two', dayStartsAt: 4, dailyGoal: 20, typedAnswerCheck: false, suggestPlacement: true },
+    settings: { retention: 0.9, newPerDay: 20, buttons: 'two', dayStartsAt: 4, dailyGoal: 20, typedAnswerCheck: false, suggestPlacement: true, autoplaySounds: true },
   }
 }
 

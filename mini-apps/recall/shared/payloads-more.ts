@@ -93,6 +93,10 @@ export const importOptionsSchema = z.object({
 })
 export type ImportOptions = z.infer<typeof importOptionsSchema>
 
+/** A file on this computer, read by its full path (the screen opened it as a file tab). */
+export const importFilePathSchema = z.object({ path: z.string().trim().min(1).max(4096) })
+export const importFileCommitSchema = importOptionsSchema.extend(importFilePathSchema.shape)
+
 export const importPreviewSchema = z.object({
   source: z.string(),
   format: z.enum(IMPORT_FORMATS),
@@ -103,11 +107,22 @@ export const importPreviewSchema = z.object({
   duplicates: z.number(),
   /** Notes that carry review history. */
   withProgress: z.number(),
+  /** Pictures and sounds together, then each on its own. */
   media: z.number(),
+  pictures: z.number(),
+  sounds: z.number(),
+  /** Something was lost or skipped. */
   warnings: z.array(z.string()),
+  /** Plain information about the file; older answers have none. */
+  notices: z.array(z.string()).default([]),
+  /** Five notes as plain text (no pictures, no sounds), a look inside. */
   sample: z.array(z.object({ kind: z.string(), front: z.string(), back: z.string() })),
 })
 export type ImportPreview = z.infer<typeof importPreviewSchema>
+
+/** What a file on disk holds, with the size it has there. */
+export const importFilePreviewSchema = importPreviewSchema.extend({ bytes: z.number() })
+export type ImportFilePreview = z.infer<typeof importFilePreviewSchema>
 
 export const importResultSchema = z.object({
   source: z.string(),
@@ -118,6 +133,7 @@ export const importResultSchema = z.object({
   status: z.enum(['draft', 'active']),
   reviewsReplayed: z.number(),
   warnings: z.array(z.string()),
+  notices: z.array(z.string()).default([]),
   /** Where the notes went. */
   decks: z.array(deckRefSchema.extend({ notes: z.number() })),
 })

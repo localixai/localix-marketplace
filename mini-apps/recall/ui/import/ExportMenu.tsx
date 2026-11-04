@@ -1,6 +1,11 @@
 import { useState } from 'react'
 import { Download } from 'lucide-react'
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@localixai/kit/dropdown-menu'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@localixai/kit/dropdown-menu'
 import { IconButton } from '@localixai/kit/icon-button'
 import { miniAppFiles } from '@localixai/mini-app-sdk/ui/runtime'
 import { miniAppApiFetch } from '@localixai/mini-app-sdk/ui/transport'

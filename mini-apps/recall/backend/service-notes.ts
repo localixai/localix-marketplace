@@ -16,6 +16,7 @@ import { newCardState } from '../shared/scheduler'
 import { invalid, notFound, RecallError } from './errors'
 import { createNote, editNote, resolveDeck, type NewNote } from './note-cards'
 import { cardsOfNotes, setOnNotes, writeSnapshot } from './repo/cards'
+import { idsWhere, libraryWhere } from './repo/library'
 import { deckByName, deleteDeck, getDeck, insertDeck, nextDeckColor, updateDeck } from './repo/decks'
 import { deleteNotes, getNote, notesByIds, notesWithKeys, updateNote } from './repo/notes'
 import { deleteReviewsOfCards } from './repo/reviews'
@@ -83,7 +84,18 @@ export function noteOps(core: Core) {
     /** One action over many notes, in one transaction. */
     async bulk(request: BulkRequest): Promise<{ affected: number; message: string }> {
       return core.write((db, now, touched) => {
-        const notes = notesByIds(db, request.ids)
+        let wanted = request.ids ?? []
+        if (request.match) {
+          // The list's own filter picks the notes, inside this transaction, and the person's count must still hold.
+          if (request.match.q && request.match.mode === 'meaning') {
+            throw invalid('A search by meaning cannot be applied to every match. Search by words, or pick the cards.')
+          }
+          wanted = idsWhere(db, libraryWhere(request.match), -1)
+          if (wanted.length !== request.expect) {
+            throw new RecallError('list_changed', 'The list changed — look again before you do this to every card.')
+          }
+        }
+        const notes = notesByIds(db, wanted)
         if (!notes.length) throw notFound('card', NOTE_IDS)
         const ids = notes.map((note) => note.id)
         const n = countOf(notes.length, 'note')

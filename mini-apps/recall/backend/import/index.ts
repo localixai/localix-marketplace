@@ -10,15 +10,19 @@ export type { ImportBatch, ImportedNote, ImportedReview } from './types'
 export { exportCollection } from './export'
 export { ImportError } from './common'
 
+const NO_MEDIA = { pictures: 0, sounds: 0 }
+
 /**
  * Reads a file into a batch for the store. The format comes from the name's extension, and from the
- * bytes when the name does not say (a zip is an Anki package, `{` starts JSON). Images are written
- * to `mediaDir`; nothing else is written. Throws `ImportError` with a message for the person.
+ * bytes when the name does not say (a zip is an Anki package, `{` starts JSON). Pictures and sounds
+ * are written to `mediaDir`, and nothing else is; in `preview` mode they are only counted and
+ * nothing is written at all. Throws `ImportError` with a message for the person.
  */
 export async function parseImport(input: {
   name: string
   bytes: Uint8Array
   mediaDir: string
+  mode?: 'commit' | 'preview'
 }): Promise<ImportBatch> {
   const name = sourceName(input.name)
   const { bytes } = input
@@ -26,7 +30,7 @@ export async function parseImport(input: {
   const extension = extensionOf(name)
   if (isZip(bytes) || extension === 'apkg' || extension === 'colpkg') {
     if (!isZip(bytes)) throw new ImportError('This is not an Anki package (it is not a zip file).')
-    return parseApkg(name, bytes, input.mediaDir)
+    return parseApkg(name, bytes, input.mediaDir, input.mode === 'preview')
   }
   if (bytes.length > MAX_FILE_BYTES) {
     throw new ImportError(`The file is ${megabytes(bytes.length)}; files up to ${megabytes(MAX_FILE_BYTES)} can be imported.`)
@@ -45,6 +49,8 @@ export async function parseImport(input: {
       decks: parsed.decks.map((deck) => ({ name: deck, description: '' })),
       notes: parsed.notes,
       media: [],
+      mediaCounts: NO_MEDIA,
+      notices: [],
       warnings: [...warnings, ...parsed.warnings],
     }
   }
@@ -57,6 +63,8 @@ export async function parseImport(input: {
       decks: decks.map((deck) => ({ name: deck, description: '' })),
       notes: parsed.notes,
       media: [],
+      mediaCounts: NO_MEDIA,
+      notices: [],
       warnings: [...warnings, ...parsed.warnings],
     }
   }

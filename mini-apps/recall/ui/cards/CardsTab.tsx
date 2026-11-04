@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useRef, useState, type CSSProperties, type KeyboardEvent } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties, type KeyboardEvent } from 'react'
 import { Library, SearchX } from 'lucide-react'
 import { toast } from '@localixai/mini-app-sdk/ui'
 import { cn } from '@localixai/mini-app-sdk/ui/classes'
@@ -14,6 +14,7 @@ import { isFiltering } from '../nav'
 import { useReportContext } from '../screen-context'
 import { BulkBar, type BulkAsk } from './BulkBar'
 import { BulkDialogs, type BulkBody } from './BulkDialogs'
+import { bulkRequest, type BulkTarget } from './bulkRequest'
 import { CardRow } from './CardRow'
 import { DetailPane } from './DetailPane'
 import { Toolbar } from './Toolbar'
@@ -55,6 +56,9 @@ export function CardsTab({
   const { filters, openId, creating } = state
   const library = useLibrary(filters, active)
   const [picked, setPicked] = useState<ReadonlySet<string>>(new Set())
+  // Every card the list matches is selected, not only those loaded: the server resolves them.
+  const [all, setAll] = useState(false)
+  const [draftsInAll, setDraftsInAll] = useState(false)
   const [ask, setAsk] = useState<BulkAsk | null>(null)
   const action = useAction()
   const containerRef = useRef<HTMLDivElement>(null)
@@ -69,7 +73,30 @@ export function CardsTab({
   const [moved, setMoved] = useState(false)
   const detailOpen = openId !== null || creating
   // Selection is ids, kept only for cards still in the list: a deleted card cannot stay selected.
-  const selected = useMemo(() => library.rows.filter((row) => picked.has(row.note.id)), [library.rows, picked])
+  const selected = useMemo(
+    () => (all ? library.rows : library.rows.filter((row) => picked.has(row.note.id))),
+    [library.rows, picked, all],
+  )
+  const count = all ? library.total : selected.length
+  const clearSelection = useCallback(() => {
+    setPicked(new Set())
+    setAll(false)
+  }, [])
+  // A different list is a different selection.
+  useEffect(clearSelection, [filters, clearSelection])
+  // "All" over a list that may hold drafts: the server says whether it does.
+  const matchQuery = library.query
+  useEffect(() => {
+    setDraftsInAll(false)
+    if (!all) return
+    let live = true
+    call('library', { query: { ...matchQuery, status: 'draft', limit: 1 } })
+      .then((page) => live && setDraftsInAll(page.total > 0))
+      .catch(() => {})
+    return () => {
+      live = false
+    }
+  }, [all, JSON.stringify(matchQuery), library.total])
   const filtering = isFiltering(filters)
 
   useReportContext(
@@ -79,7 +106,7 @@ export function CardsTab({
       filtering
         ? `Filters: deck ${decks.find((d) => d.id === filters.deck)?.name ?? filters.deck}, state ${filters.state}, type ${filters.kind}${filters.tag ? `, tag ${filters.tag}` : ''}.`
         : 'No filters.',
-      `${countOf(library.total, 'card')} match; ${selected.length} selected.`,
+      all ? `${countOf(library.total, 'card')} match. All ${countOf(library.total, 'matching card')} selected.` : `${countOf(library.total, 'card')} match; ${selected.length} selected.`,
     ]
       .filter(Boolean)
       .join(' '),
@@ -88,23 +115,27 @@ export function CardsTab({
   const toggle = useCallback(
     (id: string) =>
       setPicked((current) => {
-        const next = new Set(current)
+        // Unticking one card in "all" mode keeps the loaded cards, minus that one, as plain ids.
+        const next = all ? new Set(library.rows.map((row) => row.note.id)) : new Set(current)
         if (!next.delete(id)) next.add(id)
+        setAll(false)
         return next
       }),
-    [],
+    [all, library.rows],
   )
   const allPicked = library.rows.length > 0 && selected.length === library.rows.length
-  const toggleAll = () => setPicked(allPicked ? new Set() : new Set(library.rows.map((row) => row.note.id)))
+  const toggleAll = () => (allPicked ? clearSelection() : (setAll(false), setPicked(new Set(library.rows.map((row) => row.note.id)))))
 
   async function run(body: BulkBody) {
-    const ids = selected.map((row) => row.note.id)
-    const result = await action.run(() => call('bulk', { body: { ids, ...body } }))
+    const target: BulkTarget = all
+      ? { all: true, match: library.query, expect: library.total }
+      : { all: false, ids: selected.map((row) => row.note.id) }
+    const result = await action.run(() => call('bulk', { body: bulkRequest(target, body) }))
     setAsk(null)
     if (result) {
       toast.success(result.message)
-      setPicked(new Set())
-    }
+      clearSelection()
+    } else library.refresh()
   }
 
   function onKeyDown(event: KeyboardEvent<HTMLDivElement>) {
@@ -114,9 +145,9 @@ export function CardsTab({
     if (event.key.toLowerCase() === 'n') {
       event.preventDefault()
       state.newCard()
-    } else if (event.key === 'Escape' && picked.size > 0) {
+    } else if (event.key === 'Escape' && count > 0) {
       event.preventDefault()
-      setPicked(new Set())
+      clearSelection()
     }
   }
 
@@ -159,7 +190,7 @@ export function CardsTab({
     list = (
       <>
         <div className="flex items-center gap-2 border-b border-border-faint px-3 py-1.5 text-xs text-text-faint">
-          <Checkbox aria-label="Select all shown cards" checked={allPicked} indeterminate={selected.length > 0 && !allPicked} onChange={toggleAll} />
+          <Checkbox aria-label="Select all shown cards" checked={allPicked} indeterminate={count > 0 && !allPicked} onChange={toggleAll} />
           <span className="tabular-nums">
             {countOf(library.total, 'card')}
             {library.by === 'meaning' && ' · matched by meaning'}
@@ -172,7 +203,7 @@ export function CardsTab({
               key={row.note.id}
               row={row}
               now={now}
-              selected={picked.has(row.note.id)}
+              selected={all || picked.has(row.note.id)}
               open={row.note.id === openId}
               onToggle={toggle}
               onOpen={state.openNote}
@@ -197,12 +228,16 @@ export function CardsTab({
     <div ref={containerRef} className="@container flex min-h-0 flex-1 flex-col" onKeyDown={onKeyDown} style={{ '--cards-width': sized } as CSSProperties}>
       <div className={detailOpen ? 'hidden @3xl:block' : 'block'}>
         <Toolbar filters={filters} decks={decks} onChange={state.patch} onClear={state.clear} onNew={state.newCard} />
-        {selected.length > 0 && (
+        {count > 0 && (
           <BulkBar
-            count={selected.length}
-            hasDrafts={selected.some((row) => row.note.status === 'draft')}
+            count={count}
+            total={library.total}
+            all={all}
+            loaded={library.rows.length}
+            hasDrafts={all ? draftsInAll : selected.some((row) => row.note.status === 'draft')}
             busy={action.busy}
-            onClear={() => setPicked(new Set())}
+            onClear={clearSelection}
+            onSelectAll={() => setAll(true)}
             onAsk={setAsk}
             onRun={(act) => void run({ action: act })}
           />
@@ -251,7 +286,7 @@ export function CardsTab({
           </>
         )}
       </div>
-      <BulkDialogs ask={ask} count={selected.length} decks={decks} busy={action.busy} onClose={() => setAsk(null)} onSubmit={(body) => void run(body)} />
+      <BulkDialogs ask={ask} count={count} decks={decks} busy={action.busy} onClose={() => setAsk(null)} onSubmit={(body) => void run(body)} />
     </div>
   )
 }

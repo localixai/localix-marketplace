@@ -1,4 +1,5 @@
 import type { Note, NoteKind } from './model'
+import { withoutSounds } from './sound'
 
 /**
  * Cloze marks and the faces of a card. A cloze note keeps its text in `front` with Anki's marks,
@@ -135,14 +136,15 @@ export function cardFaces(
     }
   }
   if (variant === 'reverse') {
-    return { prompt: note.back, answer: note.front, expected: note.front, extra: note.extra }
+    return { prompt: note.back, answer: note.front, expected: withoutSounds(note.front), extra: note.extra }
   }
-  return { prompt: note.front, answer: note.back, expected: note.back, extra: note.extra }
+  return { prompt: note.front, answer: note.back, expected: withoutSounds(note.back), extra: note.extra }
 }
 
-/** The note's text without cloze marks, for search, duplicates and the agent. */
+/** The note's text without cloze marks or sounds, for search, duplicates and the agent. */
 export function plainFront(note: Pick<Note, 'kind' | 'front'>): string {
-  return note.kind === 'cloze' ? note.front.replace(CLOZE, (_m, _n, answer) => answer) : note.front
+  const front = withoutSounds(note.front)
+  return note.kind === 'cloze' ? front.replace(CLOZE, (_m, _n, answer) => answer) : front
 }
 
 /** Text compared for exact duplicates: lower-case, marks and punctuation gone, spaces collapsed. */

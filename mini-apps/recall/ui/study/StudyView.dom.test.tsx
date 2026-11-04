@@ -1,7 +1,8 @@
 import { expect, test } from 'bun:test'
-import { byLabel, click, fx, mount, press, setValue, setupDom, type Mounted } from '../test-support'
+import { FakeAudio, byLabel, click, fx, mount, press, setValue, setupDom, setupFakeAudio, type Mounted } from '../test-support'
 
 setupDom()
+setupFakeAudio()
 
 const ratings = (screen: Mounted) =>
   screen.fake.writes.filter((w) => w.name === 'studyGrade').map((w) => w.body.rating)
@@ -296,6 +297,182 @@ test('with a learning card due soon the summary says when, not a dash', async ()
     await screen.act(async () => press(study, ' '))
     await screen.settle()
     expect(byLabel('Session summary', study).textContent).toMatch(/Nextin (9|10) min/)
+  } finally {
+    await screen.unmount()
+  }
+})
+
+test('the answer buttons are light single lines: the word, then the interval, with no key in them', async () => {
+  const screen = await mount()
+  try {
+    const study = await begin(screen)
+    const show = [...study.querySelectorAll('button')].find((b) => b.textContent?.startsWith('Show answer'))!
+    expect(show.textContent).toBe('Show answer')
+    expect(show.querySelector('kbd')).toBeNull()
+
+    await screen.act(async () => press(study, ' '))
+    const bar = byLabel('How well did you remember?', study)
+    const buttons = [...bar.querySelectorAll('button')]
+    expect(buttons.map((b) => [...b.querySelectorAll('span')].map((s) => s.textContent))).toEqual([
+      ['Again', '10 min'],
+      ['Good', '3 d'],
+    ])
+    expect(bar.querySelector('kbd')).toBeNull()
+    // The hint row still teaches the keys.
+    expect(study.textContent).toContain('answer')
+    expect(byLabel('Good, back in 3 d').getAttribute('data-main')).toBe('true')
+    expect(byLabel('Again, back in 10 min').getAttribute('data-main')).toBeNull()
+  } finally {
+    await screen.unmount()
+  }
+})
+
+test('a typed card says Check answer once something is typed, still without a key inside', async () => {
+  const typed = fx.studyCard('t1', 'Capital of France?', { typed: true, expected: 'Paris' }, { kind: 'typed', back: 'Paris' })
+  const screen = await mount({ queue: [typed] })
+  try {
+    const study = await begin(screen)
+    await screen.act(async () => setValue(byLabel<HTMLInputElement>('Your answer', study), 'paris'))
+    const check = [...study.querySelectorAll('button')].find((b) => b.textContent === 'Check answer')!
+    expect(check.querySelector('kbd')).toBeNull()
+  } finally {
+    await screen.unmount()
+  }
+})
+
+const withSound = () =>
+  fx.studyCard('w1', 'word\n\n[audio](media/q1.mp3)\n\n[audio](media/q2.mp3)', {}, { back: 'meaning\n\n[audio](media/a1.mp3)', extra: 'Example.\n\n[audio](media/e1.mp3)' })
+const card = (study: HTMLElement) => byLabel('Flashcard', study)
+const buttons = (root: Element, name: string) => [...root.querySelectorAll<HTMLElement>(`[aria-label="${name}"]`)]
+
+test('a sound on a card is a play button, never the word "audio", and a new play stops the one before', async () => {
+  const screen = await mount({ queue: [withSound()], settings: fx.settingsResult({ autoplaySounds: false }) })
+  try {
+    const study = await begin(screen)
+    expect(card(study).textContent).not.toContain('audio')
+    expect(card(study).textContent).not.toContain('media/')
+    expect(buttons(card(study), 'Play sound')).toHaveLength(1)
+    expect(buttons(card(study), 'Play sound 2')).toHaveLength(1)
+    expect(FakeAudio.played()).toEqual([])
+
+    await screen.act(async () => click(buttons(card(study), 'Play sound')[0]!))
+    await screen.act(async () => click(buttons(card(study), 'Play sound 2')[0]!))
+    expect(FakeAudio.played()).toEqual(['q1.mp3', 'q2.mp3'])
+    const [first, second] = FakeAudio.instances
+    expect([first!.paused, second!.paused]).toEqual([true, false])
+  } finally {
+    await screen.unmount()
+  }
+})
+
+test('by themselves: the question\'s first sound when the card appears, the answer\'s when it is turned over', async () => {
+  const screen = await mount({ queue: [withSound()] })
+  try {
+    const study = await begin(screen)
+    expect(FakeAudio.played()).toEqual(['q1.mp3'])
+    await screen.act(async () => press(study, ' '))
+    expect(FakeAudio.played()).toEqual(['q1.mp3', 'a1.mp3'])
+    // The answer's own sound plays, not the extra note's, which waits for a press.
+    expect(buttons(byLabel('Answer', study), 'Play sound').length).toBe(2)
+  } finally {
+    await screen.unmount()
+  }
+})
+
+test('with "Play sounds by themselves" off nothing plays until it is asked for', async () => {
+  const screen = await mount({ queue: [withSound()], settings: fx.settingsResult({ autoplaySounds: false }) })
+  try {
+    const study = await begin(screen)
+    await screen.act(async () => press(study, ' '))
+    expect(FakeAudio.played()).toEqual([])
+  } finally {
+    await screen.unmount()
+  }
+})
+
+test('R plays the side in view again: the question\'s sound, then the answer\'s once it is turned over', async () => {
+  const screen = await mount({ queue: [withSound()], settings: fx.settingsResult({ autoplaySounds: false }) })
+  try {
+    const study = await begin(screen)
+    await screen.act(async () => press(study, 'r'))
+    expect(FakeAudio.played()).toEqual(['q1.mp3'])
+    await screen.act(async () => press(study, ' '))
+    await screen.act(async () => press(study, 'r'))
+    await screen.act(async () => press(study, 'r'))
+    expect(FakeAudio.played()).toEqual(['q1.mp3', 'a1.mp3', 'a1.mp3'])
+    // Replaying one sound restarts it rather than stacking a second copy.
+    expect(FakeAudio.instances.filter((audio) => !audio.paused)).toHaveLength(1)
+  } finally {
+    await screen.unmount()
+  }
+})
+
+test('the hint row offers R only for a card that has a sound', async () => {
+  const screen = await mount({ queue: [fx.studyCard('p1', 'plain'), withSound()] })
+  try {
+    const study = await begin(screen)
+    expect(study.textContent).not.toContain('replay')
+    await screen.act(async () => press(study, 'r'))
+    expect(FakeAudio.played()).toEqual([])
+    await screen.act(async () => press(study, ' '))
+    await screen.act(async () => press(study, ' '))
+    await screen.settle()
+    expect(study.textContent).toContain('replay')
+  } finally {
+    await screen.unmount()
+  }
+})
+
+const exampleOnly = () => fx.studyCard('x1', 'word\n\n[audio](media/q1.mp3)', {}, { back: 'meaning', extra: 'Example.\n\n[audio](media/e1.mp3)' })
+
+test('when only the extra note has a sound, turning the card over plays that one', async () => {
+  const screen = await mount({ queue: [exampleOnly()] })
+  try {
+    const study = await begin(screen)
+    expect(FakeAudio.played()).toEqual(['q1.mp3'])
+    await screen.act(async () => press(study, ' '))
+    expect(FakeAudio.played()).toEqual(['q1.mp3', 'e1.mp3'])
+  } finally {
+    await screen.unmount()
+  }
+})
+
+test('R after the card is turned over plays the answer, then the extra note, then the question', async () => {
+  const screen = await mount({ queue: [exampleOnly()], settings: fx.settingsResult({ autoplaySounds: false }) })
+  try {
+    const study = await begin(screen)
+    await screen.act(async () => press(study, ' '))
+    await screen.act(async () => press(study, 'r'))
+    expect(FakeAudio.played()).toEqual(['e1.mp3'])
+  } finally {
+    await screen.unmount()
+  }
+  FakeAudio.instances = []
+  const answered = await mount({ queue: [withSound()], settings: fx.settingsResult({ autoplaySounds: false }) })
+  try {
+    const study = await begin(answered)
+    await answered.act(async () => press(study, ' '))
+    await answered.act(async () => press(study, 'r'))
+    expect(FakeAudio.played()).toEqual(['a1.mp3'])
+  } finally {
+    await answered.unmount()
+  }
+})
+
+test('the hint row shows only the keys of the state: Space show before, Space Good and the digits after', async () => {
+  const screen = await mount({ queue: [fx.studyCard('p1', 'plain')] })
+  try {
+    const study = await begin(screen)
+    const hints = () => study.querySelector('p[aria-hidden]')!.textContent!
+    expect(hints()).toContain('Space show')
+    expect(hints()).not.toContain('Good')
+    expect(hints()).not.toContain('answer')
+    for (const keep of ['undo', 'edit', 'pause', 'tomorrow', 'end']) expect(hints()).toContain(keep)
+    await screen.act(async () => press(study, ' '))
+    expect(hints()).toContain('Space Good')
+    expect(hints()).toContain('1–2 answer')
+    expect(hints()).not.toContain('show')
+    for (const keep of ['undo', 'edit', 'pause', 'tomorrow', 'end']) expect(hints()).toContain(keep)
   } finally {
     await screen.unmount()
   }

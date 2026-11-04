@@ -1,4 +1,5 @@
 import { plainFront } from './cloze'
+import { soundsAsWords } from './sound'
 import { countOf, formatDue, formatDuration, formatMoment, formatPercent, snippet } from './format'
 import { RATING_NAMES, type Card, type Settings } from './model'
 import type { DeckSummary, LibraryPage, LibraryRow, NoteDetail, StudyCard, StudyNext, TodaySummary } from './payloads'
@@ -69,8 +70,8 @@ export function describeRow(row: LibraryRow, now: Date): string {
     note.status === 'draft' ? 'draft' : states,
     nextDue ? `due ${formatDue(nextDue, now)}` : '',
   ].filter(Boolean)
-  const back = note.kind === 'cloze' ? '' : ` → ${snippet(note.back, 60)}`
-  return `- ${snippet(plainFront(note), 90)}${back} (${parts.join('; ')}; id ${note.id})`
+  const back = note.kind === 'cloze' ? '' : ` → ${snippet(soundsAsWords(note.back), 60)}`
+  return `- ${snippet(plainFront({ kind: note.kind, front: soundsAsWords(note.front) }), 90)}${back} (${parts.join('; ')}; id ${note.id})`
 }
 
 export function describePage(page: LibraryPage, now: Date): string {
@@ -87,10 +88,10 @@ export function describeDetail(detail: NoteDetail, now: Date): string {
     `${note.kind} note ${note.id}${note.status === 'draft' ? ' (draft)' : ''} in ${detail.deck?.name ?? 'the Inbox'}${
       note.tags.length ? `, tags ${note.tags.map((t) => `#${t}`).join(' ')}` : ''
     }.`,
-    `Front: ${snippet(note.front, 600)}`,
+    `Front: ${snippet(soundsAsWords(note.front), 600)}`,
   ]
-  if (note.back) lines.push(`Back: ${snippet(note.back, 600)}`)
-  if (note.extra) lines.push(`Extra: ${snippet(note.extra, 400)}`)
+  if (note.back) lines.push(`Back: ${snippet(soundsAsWords(note.back), 600)}`)
+  if (note.extra) lines.push(`Extra: ${snippet(soundsAsWords(note.extra), 400)}`)
   for (const card of detail.cards) {
     lines.push(
       `Card ${card.variant} (id ${card.id}): ${cardStateWord(card)}, ${countOf(card.reps, 'review')}, ${countOf(card.lapses, 'lapse')}` +
@@ -108,10 +109,10 @@ export function describeDetail(detail: NoteDetail, now: Date): string {
 export function describeStudyCard(card: StudyCard, next: Pick<StudyNext, 'counts'>): string {
   const lines = [
     `Card ${card.card.id} (${card.kind}${card.deck ? `, ${card.deck.name}` : ''}); ${next.counts.total} left now including this one.`,
-    `Ask: ${card.prompt}`,
-    `Answer (keep it until they reply): ${card.answer}`,
+    `Ask: ${soundsAsWords(card.prompt)}`,
+    `Answer (keep it until they reply): ${soundsAsWords(card.answer)}`,
   ]
-  if (card.extra) lines.push(`Extra: ${snippet(card.extra, 500)}`)
+  if (card.extra) lines.push(`Extra: ${snippet(soundsAsWords(card.extra), 500)}`)
   const labels = (['1', '2', '3', '4'] as const).map((r) => `${RATING_NAMES[Number(r) as 1]} ${card.outcomes[r].label}`)
   lines.push(`Next due by grade: ${labels.join(' · ')}.`)
   return lines.join('\n')
@@ -142,6 +143,7 @@ const SETTING_WORDS: Record<keyof Settings, string> = {
   dailyGoal: 'daily goal (reviews)',
   typedAnswerCheck: 'check typed answers with the decision model',
   suggestPlacement: 'suggest decks for Inbox cards',
+  autoplaySounds: 'play a card\'s sounds by themselves while studying',
 }
 
 export function describeSettings(result: SettingsResult): string {
@@ -159,7 +161,8 @@ export function describePreview(preview: ImportPreview): string {
   return [
     `${preview.source} (${preview.format}): ${countOf(preview.notes, 'note')} making ${countOf(preview.cards, 'card')}.`,
     decks.length ? `Decks: ${decks.join(', ')}${preview.decks.length > 10 ? ', …' : ''}.` : 'No decks in the file.',
-    `${preview.duplicates} already here exactly; ${preview.withProgress} with review history; ${countOf(preview.media, 'image')}.`,
+    `${preview.duplicates} already here exactly; ${preview.withProgress} with review history; ${countOf(preview.pictures, 'picture')}, ${countOf(preview.sounds, 'sound')}.`,
+    ...(preview.notices.length ? [`Notes: ${preview.notices.join(' ')}`] : []),
     ...(preview.warnings.length ? [`Warnings: ${preview.warnings.join('; ')}.`] : []),
   ].join('\n')
 }
@@ -173,6 +176,7 @@ export function describeImportResult(result: ImportResult): string {
     result.decksCreated.length ? `New decks: ${result.decksCreated.slice(0, 10).join(', ')}.` : '',
     result.skippedDuplicates ? `Skipped ${countOf(result.skippedDuplicates, 'exact duplicate')}.` : '',
     result.reviewsReplayed ? `Kept progress: ${countOf(result.reviewsReplayed, 'past answer')} replayed.` : '',
+    result.notices.length ? `Notes: ${result.notices.join(' ')}` : '',
     result.warnings.length ? `Warnings: ${result.warnings.join('; ')}.` : '',
   ]
     .filter(Boolean)

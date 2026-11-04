@@ -16,6 +16,7 @@ import { ExportMenu } from './import/ExportMenu'
 import { ImportDialog } from './import/ImportDialog'
 import { Select, type SelectOption } from '@localixai/kit/select'
 import { INBOX } from '../shared/model'
+import { useLaunch } from './launch'
 import { TABS, type StudyTarget, type Tab } from './nav'
 import './recall.css'
 import { ContextProvider } from './screen-context'
@@ -90,6 +91,8 @@ function Shell({ active, publish }: { active: boolean; publish: ScreenProps['pub
     cards.show(preset)
     go('cards')
   }
+  // The Anki file tab can ask for the imported cards or a study session.
+  useLaunch((launch) => (launch.show === 'study' ? setStudy({ target: launch.target }) : showCards(launch.preset)))
   const due = today.data?.due.total ?? 0
   const deckList = decks.data?.decks ?? []
   const deckOptions: SelectOption[] = [

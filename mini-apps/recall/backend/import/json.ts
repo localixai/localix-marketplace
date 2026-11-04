@@ -72,7 +72,7 @@ export function parseJsonBackup(name: string, bytes: Uint8Array): ImportBatch {
   const used = new Set(notes.map((note) => note.deck))
   const withMedia = notes.filter((note) => /media\//.test(`${note.front}${note.back}${note.extra}`)).length
   if (withMedia) {
-    warnings.push(`${plural(withMedia, 'note')} with images: a backup holds no pictures, so they show only if the files are already here`)
+    warnings.push(`${plural(withMedia, 'note')} with pictures or sounds: a backup holds neither, so they show only if the files are already here`)
   }
   return {
     source: name,
@@ -82,6 +82,8 @@ export function parseJsonBackup(name: string, bytes: Uint8Array): ImportBatch {
       .map((deck) => ({ name: deck.name, description: deck.description })),
     notes,
     media: [],
+    mediaCounts: { pictures: 0, sounds: 0 },
+    notices: [],
     warnings,
   }
 }

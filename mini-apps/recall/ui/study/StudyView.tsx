@@ -19,7 +19,8 @@ import type { StudyTarget } from '../nav'
 import { useReportContext } from '../screen-context'
 import { CardFace } from './CardFace'
 import { EndScreen } from './EndScreen'
-import { GradeBar, ratingsFor } from './GradeBar'
+import { ACTION_CLASS, GradeBar, ratingsFor } from './GradeBar'
+import { useSounds } from './useSounds'
 import { useStudy } from './useStudy'
 
 const KIND_WORD = { basic: '', reversed: 'Two-way', cloze: 'Cloze', typed: 'Typed answer' } as const
@@ -31,7 +32,7 @@ function Elapsed({ since }: { since: number }) {
 
 /**
  * The full-pane study view. One card sits on the table; Space turns it over, then Space is Good,
- * 1–4 answer, Z undoes, E edits, P pauses, S skips until tomorrow and Esc ends. Keys the focused
+ * 1–4 answer, R plays the sound again, Z undoes, E edits, P pauses, S skips until tomorrow and Esc ends. Keys the focused
  * control already owns (a text field, a pressed button) are left to it.
  */
 export function StudyView({
@@ -45,6 +46,8 @@ export function StudyView({
 }) {
   const settings = useRead('settings')
   const buttons: Settings['buttons'] = settings.data?.settings.buttons ?? 'two'
+  // Nothing plays by itself until the setting is known to be on.
+  const autoplay = settings.data?.settings.autoplaySounds ?? false
   const filter = useRef<CardFilter>({ deckIds: target?.deckIds })
   const study = useStudy(filter.current)
   const { session } = study
@@ -54,6 +57,7 @@ export function StudyView({
   const [ending, setEnding] = useState(false)
   const [editing, setEditing] = useState(false)
   const card = session.card
+  const sounds = useSounds(card, session.revealed, autoplay)
 
   useEffect(() => void study.start(), [])
   const typing = card?.typed === true && !session.revealed
@@ -100,6 +104,7 @@ export function StudyView({
     }
     if (key === 'z') return claim(), void study.undo()
     if (key === 'e') return claim(), setEditing(true)
+    if (key === 'r') return claim(), sounds.replay()
     if (key === 'p') return claim(), void study.pause()
     if (key === 's') return claim(), void study.skip()
   }
@@ -207,15 +212,21 @@ export function StudyView({
           {session.revealed ? (
             <GradeBar card={card} buttons={buttons} suggested={suggested} busy={session.busy} onGrade={gradeWith} />
           ) : (
-            <Button size="xl" variant="mono" disabled={session.busy} className="w-full @md:max-w-xl" onClick={turn}>
+            <Button size="xl" variant="secondary" disabled={session.busy} className={`${ACTION_CLASS} recall-grade w-full @md:max-w-md`} data-main="true" onClick={turn}>
               {card.typed && session.typed.trim() ? 'Check answer' : 'Show answer'}
-              <Kbd className="hidden @2xl:inline-flex">{card.typed ? 'Enter' : 'Space'}</Kbd>
             </Button>
           )}
           <p className="hidden items-center gap-3 text-2xs text-text-faint @2xl:flex" aria-hidden>
-            <span><Kbd>Space</Kbd> show / Good</span>
-            <span><Kbd>1</Kbd>–<Kbd>{buttons === 'four' ? '4' : '2'}</Kbd> answer</span>
+            {session.revealed ? (
+              <>
+                {(!card.typed || suggested) && <span><Kbd>Space</Kbd> Good</span>}
+                <span><Kbd>1</Kbd>–<Kbd>{buttons === 'four' ? '4' : '2'}</Kbd> answer</span>
+              </>
+            ) : (
+              <span><Kbd>{card.typed ? 'Enter' : 'Space'}</Kbd> show</span>
+            )}
             <span><Kbd>Z</Kbd> undo</span>
+            {sounds.has && <span><Kbd>R</Kbd> replay sound</span>}
             <span><Kbd>E</Kbd> edit</span>
             <span><Kbd>P</Kbd> pause</span>
             <span><Kbd>S</Kbd> tomorrow</span>

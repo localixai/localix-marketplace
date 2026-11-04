@@ -7,6 +7,8 @@ import { parseImport } from './index'
 import { zstdDecompress } from './zip'
 import { AT, PNG, buildApkg, tempDir } from './test-support'
 
+const MP3 = new Uint8Array([9, 9])
+
 const dirs: { remove: () => void }[] = []
 afterEach(() => dirs.splice(0).forEach((dir) => dir.remove()))
 function workspace() {
@@ -28,10 +30,11 @@ describe.each(['old', 'new'] as const)('an Anki package, %s schema', (schema) =>
   test('note types are mapped by shape, with decks, tags and Markdown', async () => {
     const { batch } = await read()
     const file = `${sha(PNG)}.png`
+    const sound = `${sha(MP3)}.mp3`
     expect(batch.source).toBe('spanish.apkg')
     expect(batch.format).toBe('apkg')
     expect(batch.notes.map((note) => [note.kind, note.front, note.back, note.extra, note.deck])).toEqual([
-      ['basic', 'hola', `**hello**![](media/${file})`, '', 'Spanish / Verbs'],
+      ['basic', `hola\n\n[audio](media/${sound})`, `**hello**![](media/${file})`, '', 'Spanish / Verbs'],
       ['reversed', 'uno', 'one', '', 'Spanish / Verbs'],
       ['cloze', '{{c1::Paris}} and {{c2::Rome}}', '', 'capitals', undefined],
       ['basic', 'casa', 'house', '', 'Spanish / Verbs'],
@@ -56,16 +59,21 @@ describe.each(['old', 'new'] as const)('an Anki package, %s schema', (schema) =>
     const { batch } = await read()
     expect(batch.notes[3]!.paused).toBe(true)
     expect(batch.notes[0]!.paused).toBeUndefined()
-    expect(batch.warnings).toContain('1 sound dropped')
+    expect(batch.warnings.some((warning) => /sound/.test(warning))).toBe(false)
     expect(batch.warnings).toContain('1 note without a front or back skipped')
     expect(batch.warnings).toContain('1 note of the note type "Vocabulary" imported as basic cards from their first two fields')
   })
 
-  test('only the images the notes use are written, under their hash, and recorded', async () => {
+  test('only the pictures and sounds the notes use are written, under their hash, and recorded', async () => {
     const { batch, media } = await read()
     const file = `${sha(PNG)}.png`
-    expect(readdirSync(media)).toEqual([file])
-    expect(batch.media).toEqual([{ original: 'cat.png', file }])
+    const sound = `${sha(MP3)}.mp3`
+    expect(readdirSync(media).sort()).toEqual([file, sound].sort())
+    expect(batch.media).toEqual([
+      { original: 'a.mp3', file: sound },
+      { original: 'cat.png', file },
+    ])
+    expect(batch.mediaCounts).toEqual({ pictures: 1, sounds: 1 })
   })
 
   test('a name that tries to leave the folder never decides where a file goes', async () => {
