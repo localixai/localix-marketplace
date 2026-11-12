@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="assets/logo.svg" width="72" height="72" alt="Localix">
+  <img src="https://raw.githubusercontent.com/localixai/.github/main/profile/logo.svg" width="72" height="72" alt="Localix">
 </p>
 
 <h1 align="center">Localix marketplace</h1>
