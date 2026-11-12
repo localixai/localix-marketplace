@@ -7,7 +7,7 @@
     "name": "localix"
   },
   "license": "MIT",
-  "homepage": "https://github.com/rsaryev/localix",
+  "homepage": "https://github.com/rsaryev/localix-studio",
   "apiVersion": 1,
   "category": "development",
   "tags": ["git", "source-control", "diffs", "branches", "review"],

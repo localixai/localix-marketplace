@@ -40,7 +40,7 @@ stored row array before slicing the requested page.
 
 ## Source of truth
 
-- [Data-view package](https://github.com/rsaryev/localix/blob/main/packages/dataview/src/model.ts)
+- [Data-view package](https://github.com/rsaryev/localix-studio/blob/main/packages/dataview/src/model.ts)
 - [Table store](../../backend/table/store.ts)
 - [Table service](../../backend/table/service.ts)
 - [Table routes](../../backend/table/routes.ts)

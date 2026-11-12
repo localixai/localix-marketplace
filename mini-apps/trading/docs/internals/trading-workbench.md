@@ -178,7 +178,7 @@ scope, resource anchors, and chart command listener.
 - [Research public markets](../trading.md)
 - [Mini apps](https://localix.ai/docs/extending--mini-apps)
 - [Workspace](https://localix.ai/docs/features--workspace)
-- [Message bindings](https://github.com/rsaryev/localix/blob/main/docs/internals/subsystems/message-bindings.md)
+- [Message bindings](https://github.com/rsaryev/localix-studio/blob/main/docs/internals/subsystems/message-bindings.md)
 - [Capabilities and permissions](https://localix.ai/docs/features--capabilities)
 
 ## Source of truth

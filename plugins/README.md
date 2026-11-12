@@ -4,7 +4,7 @@ Localix's own Claude Code plugins. Each folder here is one plugin in Claude Code
 (`.claude-plugin/plugin.json`, `commands/`, `skills/` and the rest), with no Localix code and no
 `mini-app.json`. Mini apps are a separate product and live in
 [`mini-apps/`](../mini-apps/README.md); see
-[plugins and mini apps](https://github.com/rsaryev/localix/blob/main/docs/internals/plugins-and-mini-apps.md).
+[plugins and mini apps](https://github.com/rsaryev/localix-studio/blob/main/docs/internals/plugins-and-mini-apps.md).
 
 | Plugin                                      | What it adds                                                                            |
 | ------------------------------------------- | --------------------------------------------------------------------------------------- |

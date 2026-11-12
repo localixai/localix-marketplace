@@ -84,16 +84,16 @@ not each time their tab is shown again.
 The panel uses shared workbench toolbars and controls; secondary Git actions live in the header's
 overflow menu. Diff layout and navigation reserve a row above content instead of floating over code.
 Every diff surface — the read-only tab, the live patch and the mini app's staging view — mounts the
-host's [`VirtualDiff`](https://github.com/rsaryev/localix/blob/main/apps/ui/src/shared/ui/diff/VirtualDiff.tsx). A patch is parsed once
+host's [`VirtualDiff`](https://github.com/rsaryev/localix-studio/blob/main/apps/ui/src/shared/ui/diff/VirtualDiff.tsx). A patch is parsed once
 into a flat document
-([`diffDocument.ts`](https://github.com/rsaryev/localix/blob/main/apps/ui/src/shared/ui/diff/document/diffDocument.ts)), laid out as
-fixed-height rows ([`diffRows.ts`](https://github.com/rsaryev/localix/blob/main/apps/ui/src/shared/ui/diff/document/diffRows.ts)) and
+([`diffDocument.ts`](https://github.com/rsaryev/localix-studio/blob/main/apps/ui/src/shared/ui/diff/document/diffDocument.ts)), laid out as
+fixed-height rows ([`diffRows.ts`](https://github.com/rsaryev/localix-studio/blob/main/apps/ui/src/shared/ui/diff/document/diffRows.ts)) and
 windowed, so mounted rows stay bounded however large the diff is.
 
 Syntax highlighting and word marks are computed per mounted line and cached
-([`lineCache.ts`](https://github.com/rsaryev/localix/blob/main/apps/ui/src/shared/ui/diff/document/lineCache.ts)). Pinned file and hunk
+([`lineCache.ts`](https://github.com/rsaryev/localix-studio/blob/main/apps/ui/src/shared/ui/diff/document/lineCache.ts)). Pinned file and hunk
 headers are an overlay whose geometry comes from the row offsets
-([`diffSticky.ts`](https://github.com/rsaryev/localix/blob/main/apps/ui/src/shared/ui/diff/document/diffSticky.ts)). The staging view
+([`diffSticky.ts`](https://github.com/rsaryev/localix-studio/blob/main/apps/ui/src/shared/ui/diff/document/diffSticky.ts)). The staging view
 ([`useStagingDiff.ts`](../../ui/source-control/model/useStagingDiff.ts))
 keys each line by its raw-diff index, so a change run of the document is the payload of a block op.
 

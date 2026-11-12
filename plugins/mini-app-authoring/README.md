@@ -1,6 +1,6 @@
 # mini-app-authoring
 
-A Claude Code plugin for making [Localix](https://github.com/rsaryev/localix) mini apps — screens, a
+A Claude Code plugin for making [Localix](https://github.com/rsaryev/localix-studio) mini apps — screens, a
 backend and agent tools that run inside Localix — and sharing them. It works the same in Claude Code
 and in Localix.
 

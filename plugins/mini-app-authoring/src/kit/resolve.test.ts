@@ -74,7 +74,7 @@ describe('resolveKit', () => {
     })
     expect(source.from).toBe('release')
     expect(asked).toContain(
-      `https://github.com/rsaryev/localix/releases/download/v0.4.0/${KIT_ARCHIVE}`,
+      `https://github.com/rsaryev/localix-studio/releases/download/v0.4.0/${KIT_ARCHIVE}`,
     )
   })
 
@@ -91,7 +91,7 @@ describe('resolveKit', () => {
     })
     expect(source.from).toBe('release')
     expect(asked.at(-1)).toBe(
-      `https://github.com/rsaryev/localix/releases/latest/download/${KIT_ARCHIVE}`,
+      `https://github.com/rsaryev/localix-studio/releases/latest/download/${KIT_ARCHIVE}`,
     )
     // The app is then built for another Localix than the one running it: that is said.
     expect(source.note).toContain('Localix 0.0.9')
@@ -120,7 +120,7 @@ describe('resolveKit', () => {
     })
     expect(source.from).toBe('release')
     expect(asked[0]).toBe(
-      'https://github.com/rsaryev/localix/releases/download/v0.4.0/SHA256SUMS.txt',
+      'https://github.com/rsaryev/localix-studio/releases/download/v0.4.0/SHA256SUMS.txt',
     )
   })
 
@@ -129,7 +129,7 @@ describe('resolveKit', () => {
       const { fetchImpl, asked } = await release({ 'kit.json': '{"kitModules":[]}' })
       await resolveKit({ env: {}, home: tempDir(), fetch: fetchImpl, runtime })
       expect(asked[0]).toBe(
-        'https://github.com/rsaryev/localix/releases/latest/download/SHA256SUMS.txt',
+        'https://github.com/rsaryev/localix-studio/releases/latest/download/SHA256SUMS.txt',
       )
     }
   })

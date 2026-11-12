@@ -49,4 +49,4 @@ conversation permission modes still apply.
 - [Game state and transitions](shared/game.ts)
 - [Wake requests](backend/ask-agent.ts)
 - [Visible snapshot and fallback cadence](ui/game/useGame.ts)
-- [Shared store synchronization](https://github.com/rsaryev/localix/blob/main/packages/mini-app-sdk/src/ui/store-snapshot.ts)
+- [Shared store synchronization](https://github.com/rsaryev/localix-studio/blob/main/packages/mini-app-sdk/src/ui/store-snapshot.ts)

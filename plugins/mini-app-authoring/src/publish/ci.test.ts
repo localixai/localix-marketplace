@@ -32,7 +32,7 @@ describe('the release workflow', () => {
     const { env, jobs } = workflow('0.1.0-beta.18')
 
     expect(env.MINI_APP_KIT_RELEASES).toBe(
-      'https://github.com/rsaryev/localix/releases/download/v0.1.0-beta.18',
+      'https://github.com/rsaryev/localix-studio/releases/download/v0.1.0-beta.18',
     )
     const toolchain = jobs.build.steps.find((s) => s.name === 'The mini app toolchain')
     expect(toolchain?.with).toMatchObject({
@@ -46,7 +46,7 @@ describe('the release workflow', () => {
     const { env } = workflow('unknown')
 
     expect(env.MINI_APP_KIT_RELEASES).toBe(
-      'https://github.com/rsaryev/localix/releases/latest/download',
+      'https://github.com/rsaryev/localix-studio/releases/latest/download',
     )
   })
 

@@ -14,7 +14,7 @@ import { dirname, join, resolve } from 'node:path'
  */
 
 export const ROOT = resolve(import.meta.dir, '..')
-const RELEASES = 'https://github.com/rsaryev/localix/releases'
+const RELEASES = 'https://github.com/rsaryev/localix-studio/releases'
 const ARCHIVE = 'mini-app-kit.tar.gz'
 const LINKED = join(ROOT, 'node_modules', '@localixai', 'mini-app-kit')
 

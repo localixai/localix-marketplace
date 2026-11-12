@@ -48,6 +48,6 @@ before marking its card complete. Schedule dependent work only after its prerequ
 
 ## Source of truth
 
-- [Agent input schema](https://github.com/rsaryev/localix/blob/main/apps/api/src/features/agent-core/tools/agent/agent-tool.ts)
-- [Subagent admission](https://github.com/rsaryev/localix/blob/main/apps/api/src/features/agent-core/tools/agent/agent-start.ts)
+- [Agent input schema](https://github.com/rsaryev/localix-studio/blob/main/apps/api/src/features/agent-core/tools/agent/agent-tool.ts)
+- [Subagent admission](https://github.com/rsaryev/localix-studio/blob/main/apps/api/src/features/agent-core/tools/agent/agent-start.ts)
 - [Board tool actions](../../mini-apps/kanban/backend/tools.ts)
