@@ -42,7 +42,9 @@ export const card = (id: string, noteId: string, over: Partial<Card> = {}): Card
   id,
   noteId,
   variant: 'forward',
-  due: '2026-11-06T09:00:00.000Z',
+  // Two days from the moment the test runs: the screen says when a card is due against the real
+  // clock, so a fixed date reads "in 2 d" for one day only.
+  due: new Date(Date.now() + 2 * 86_400_000).toISOString(),
   stability: 4,
   difficulty: 5,
   scheduledDays: 2,
