@@ -4,7 +4,7 @@ Localix's own Claude Code plugins. Each folder here is one plugin in Claude Code
 (`.claude-plugin/plugin.json`, `commands/`, `skills/` and the rest), with no Localix code and no
 `mini-app.json`. Mini apps are a separate product and live in
 [`mini-apps/`](../mini-apps/README.md); see
-[plugins and mini apps](https://github.com/rsaryev/localix-studio/blob/main/docs/internals/plugins-and-mini-apps.md).
+[plugins and mini apps](https://github.com/localixai/localix-studio/blob/main/docs/internals/plugins-and-mini-apps.md).
 
 | Plugin                                      | What it adds                                                                            |
 | ------------------------------------------- | --------------------------------------------------------------------------------------- |
@@ -18,7 +18,7 @@ as the `localix` marketplace. Localix trusts it and adds it on first start, so t
 Store (**Plugins**) like any other plugin; nothing is built into Localix. In Claude Code:
 
 ```bash
-claude plugin marketplace add rsaryev/localix-marketplace
+claude plugin marketplace add localixai/localix-marketplace
 claude plugin install mini-app-authoring@localix
 ```
 

@@ -87,8 +87,8 @@ yourself and name it at the end. Ask the person one thing only: the confirmation
    Others can also use Store → **Sources** → **Add source…**, or
    `/mini-app marketplace add <owner>/<repo>`.
 
-8. **Offer to list it in Localix Community** (`rsaryev/localix-community`), which every Localix
-   shows. Only on a yes: fork it with `gh repo fork rsaryev/localix-community --clone`, add one
+8. **Offer to list it in Localix Community** (`localixai/localix-community`), which every Localix
+   shows. Only on a yes: fork it with `gh repo fork localixai/localix-community --clone`, add one
    entry to `.localix-mini-app/marketplace.json` in alphabetical order —
    `{ "name": "<name>", "source": { "source": "github", "repo": "<owner>/<repo>" }, "description": "<what it does, 10–2000 characters>", "category": "<category>", "homepage": "https://github.com/<owner>/<repo>" }`
    — run `mini-app marketplace validate --fetch` in the fork, and open a pull request with

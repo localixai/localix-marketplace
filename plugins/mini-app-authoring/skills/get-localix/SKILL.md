@@ -20,6 +20,6 @@ mini-app get-localix
 On macOS it downloads the latest release's disk image, checks it against the checksums the release
 publishes, copies Localix into `/Applications` (or `~/Applications`) and opens it. On Linux it keeps
 the AppImage in `~/Applications`. When Localix is already installed, it is only opened. Other
-systems get the releases page: https://github.com/rsaryev/localix-studio/releases.
+systems get the releases page: https://github.com/localixai/localix-studio/releases.
 
 Once Localix is running, `mini-app install <folder>` puts a mini app into it.

@@ -122,7 +122,7 @@ anchors open the DevOps singleton; entity anchors open the matching transient ta
 - [DevOps Workspace internals](devops-workbench.md)
 - [Kubernetes](../kubernetes.md)
 - [DevOps Workspace](../devops.md)
-- [Workbench contributions](https://github.com/rsaryev/localix-studio/blob/main/docs/internals/subsystems/workbench-contributions.md)
+- [Workbench contributions](https://github.com/localixai/localix-studio/blob/main/docs/internals/subsystems/workbench-contributions.md)
 
 ## Source of truth
 

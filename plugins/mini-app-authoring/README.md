@@ -1,17 +1,17 @@
 # mini-app-authoring
 
-A Claude Code plugin for making [Localix](https://github.com/rsaryev/localix-studio) mini apps — screens, a
+A Claude Code plugin for making [Localix](https://github.com/localixai/localix-studio) mini apps — screens, a
 backend and agent tools that run inside Localix — and sharing them. It works the same in Claude Code
 and in Localix.
 
-It is published in the Localix marketplace (`rsaryev/localix-marketplace`), which Localix trusts and
+It is published in the Localix marketplace (`localixai/localix-marketplace`), which Localix trusts and
 adds on first start. **In Localix**, install it from the Store (Plugins), then type
 `/mini-app-authoring:create` in any chat with what the app should do.
 
 **In Claude Code**, add the marketplace once and install it:
 
 ```text
-/plugin marketplace add rsaryev/localix-marketplace
+/plugin marketplace add localixai/localix-marketplace
 /plugin install mini-app-authoring@localix
 ```
 
@@ -84,7 +84,7 @@ marketplace's address (`{ "source": "url", "url": "https://…" }`). The format 
   alone.
 - `mini-app marketplace build [file] [--out dir] [--curation]` checks and packs each folder's app
   and writes the release Localix reads, `mini-app-marketplace.json`, with the links beside them.
-  The Localix marketplace and [Localix Community](https://github.com/rsaryev/localix-community) are
+  The Localix marketplace and [Localix Community](https://github.com/localixai/localix-community) are
   built and checked this way.
 - `mini-app sign [folder] [--next-key <key>]` signs a release with `MINI_APP_SIGNING_KEY` or the key
   `mini-app keygen` made. It writes `signingKeys`, the keys of the next release, first: this key's

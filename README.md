@@ -34,7 +34,7 @@ In **Localix**, open the Store: this marketplace is already there. **Mini apps**
 In **Claude Code**:
 
 ```bash
-claude plugin marketplace add rsaryev/localix-marketplace
+claude plugin marketplace add localixai/localix-marketplace
 claude plugin install mini-app-authoring@localix
 ```
 

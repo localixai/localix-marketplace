@@ -79,7 +79,7 @@ export async function getLocalix(deps: GetLocalixDeps = {}): Promise<GotLocalix>
   const file = installerFor(platform, deps.arch ?? process.arch)
   if (!file) {
     throw new UserError(
-      `Localix publishes no installer for ${platform}/${deps.arch ?? process.arch}; see https://github.com/rsaryev/localix-studio/releases.`,
+      `Localix publishes no installer for ${platform}/${deps.arch ?? process.arch}; see https://github.com/localixai/localix-studio/releases.`,
     )
   }
   const base = env.LOCALIX_RELEASES?.trim() || RELEASES

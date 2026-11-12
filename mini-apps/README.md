@@ -5,7 +5,7 @@ plugin: one `.localix-mini-app/mini-app.json` (identity, category, backend, sett
 `guide.md` the
 agent reads with `MiniAppGuide` before it first uses the app, a native backend (`backend/`) and
 screens (`ui/`). It holds no `skills/`, `.claude-plugin/` or hooks; see
-[plugins and mini apps](https://github.com/rsaryev/localix-studio/blob/main/docs/internals/plugins-and-mini-apps.md).
+[plugins and mini apps](https://github.com/localixai/localix-studio/blob/main/docs/internals/plugins-and-mini-apps.md).
 
 Localix ships none of them.
 [`.localix-mini-app/marketplace.json`](../.localix-mini-app/marketplace.json) lists them, in the
@@ -100,11 +100,11 @@ bun test mini-apps/kanban  # its tests alone
 ```
 
 `bun run check` with no name checks the plugins and every mini app, as CI does. The
-[mini app SDK](https://github.com/rsaryev/localix-studio/blob/main/packages/mini-app-sdk/README.md) owns
+[mini app SDK](https://github.com/localixai/localix-studio/blob/main/packages/mini-app-sdk/README.md) owns
 the typed host contracts.
 
 ## Source of truth
 
-- [Manifest contract](https://github.com/rsaryev/localix-studio/blob/main/packages/mini-app-sdk/src/manifest/app.ts)
-- [Installed artifact trust](https://github.com/rsaryev/localix-studio/blob/main/apps/api/src/features/ext/trust.ts)
-- [Mini app SDK entry points](https://github.com/rsaryev/localix-studio/blob/main/packages/mini-app-sdk/README.md)
+- [Manifest contract](https://github.com/localixai/localix-studio/blob/main/packages/mini-app-sdk/src/manifest/app.ts)
+- [Installed artifact trust](https://github.com/localixai/localix-studio/blob/main/apps/api/src/features/ext/trust.ts)
+- [Mini app SDK entry points](https://github.com/localixai/localix-studio/blob/main/packages/mini-app-sdk/README.md)

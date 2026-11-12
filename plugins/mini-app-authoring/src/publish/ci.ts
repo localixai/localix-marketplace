@@ -34,7 +34,7 @@ export const GENERATED_IGNORES = [
 ]
 
 /** The marketplace this plugin is published in: the workflow checks the toolchain out of it. */
-export const MARKETPLACE_REPO = 'rsaryev/localix-marketplace'
+export const MARKETPLACE_REPO = 'localixai/localix-marketplace'
 
 /** Add what `GENERATED_IGNORES` lacks to the mini app's `.gitignore`; the lines it added. */
 export async function ensureGitignore(dir: string): Promise<string[]> {

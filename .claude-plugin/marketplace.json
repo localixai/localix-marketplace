@@ -4,7 +4,7 @@
     "name": "Localix"
   },
   "metadata": {
-    "description": "Localix's own Claude Code plugins and mini apps. Localix trusts this marketplace and adds it on first start; in Claude Code, add it with claude plugin marketplace add rsaryev/localix-marketplace.",
+    "description": "Localix's own Claude Code plugins and mini apps. Localix trusts this marketplace and adds it on first start; in Claude Code, add it with claude plugin marketplace add localixai/localix-marketplace.",
     "localix": {
       "collections": [
         {
@@ -30,7 +30,7 @@
         "name": "Localix"
       },
       "category": "development",
-      "homepage": "https://github.com/rsaryev/localix-marketplace/tree/main/plugins/mini-app-authoring",
+      "homepage": "https://github.com/localixai/localix-marketplace/tree/main/plugins/mini-app-authoring",
       "localix": {
         "installByDefault": true,
         "suggestFor": {
@@ -52,7 +52,7 @@
         "name": "Localix"
       },
       "category": "development",
-      "homepage": "https://github.com/rsaryev/localix-marketplace/tree/main/plugins/team",
+      "homepage": "https://github.com/localixai/localix-marketplace/tree/main/plugins/team",
       "localix": {
         "installByDefault": true
       }

@@ -1,12 +1,12 @@
 {
   "name": "team",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "Starter specialist agents: architect, backend, frontend, design and devops.",
   "author": {
     "name": "Localix"
   },
-  "homepage": "https://github.com/rsaryev/localix-marketplace/tree/main/plugins/team",
-  "repository": "https://github.com/rsaryev/localix-studio",
+  "homepage": "https://github.com/localixai/localix-marketplace/tree/main/plugins/team",
+  "repository": "https://github.com/localixai/localix-studio",
   "license": "MIT",
   "keywords": ["localix", "agents", "team"]
 }

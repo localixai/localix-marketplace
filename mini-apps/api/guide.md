@@ -102,5 +102,5 @@ Each teammate supplies the value through their own Vault.
 
 ## Related guides
 
-- [API Client](https://github.com/rsaryev/localix-marketplace/blob/main/mini-apps/api/docs/api.md)
+- [API Client](https://github.com/localixai/localix-marketplace/blob/main/mini-apps/api/docs/api.md)
 - [Secrets Vault](https://localix.ai/docs/features--secrets)
