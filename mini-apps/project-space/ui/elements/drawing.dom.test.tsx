@@ -72,9 +72,10 @@ test('imported answer forms keep their renderer, controls and editable source on
   try {
     await act(async () => render())
     expect(host.querySelectorAll('[role="treeitem"]')).toHaveLength(4)
-    // The kit's renderer names these classes: `lx-` up to Localix 0.1.0-beta.26, `llx-` after it.
+    // The kit's renderer names these classes: `lx-` up to Localix 0.1.0-beta.26, `llx-` in beta.27,
+    // and `fd-` (flowdown) from beta.28.
     for (const form of ['steps', 'stats', 'verdicts', 'callout', 'quote-source'])
-      expect(host.querySelector(`.lx-${form}, .llx-${form}`), form).not.toBeNull()
+      expect(host.querySelector(`.lx-${form}, .llx-${form}, .fd-${form}`), form).not.toBeNull()
     expect(host.textContent).not.toContain('[!')
     const tabs = host.querySelectorAll<HTMLButtonElement>('[role="tab"]')
     expect(Array.from(tabs, (tab) => tab.textContent)).toEqual(['macOS', 'Linux'])
@@ -95,7 +96,7 @@ test('imported answer forms keep their renderer, controls and editable source on
     expect(text).toContain(tree)
     await act(async () =>
       host
-        .querySelector('.lx-step-body, .llx-step-body')
+        .querySelector('.lx-step-body, .llx-step-body, .fd-step-body')
         ?.dispatchEvent(new MouseEvent('dblclick', { bubbles: true })),
     )
     expect(edits).toBe(1)
