@@ -12,6 +12,7 @@ import { boardUri, BOARD_KIND, SEARCH_PROVIDER_ID, TASK_KIND, taskUri } from '..
 import { KANBAN_TOOL } from '../shared/tool'
 import { BOARD_TITLE, resolveKanbanAnchor } from './navigation'
 import { KanbanCard } from './tool-card/KanbanCard'
+import { useTaskStatusItem } from './composer/taskStatusItem'
 
 const BoardTab = lazy(() => import('./board/board').then((m) => ({ default: m.BoardTab })))
 const TaskTab = lazy(() => import('./board/task-panel').then((m) => ({ default: m.TaskTab })))
@@ -135,6 +136,12 @@ export function registerUi(host: MiniAppUiHost): void {
     Component: KanbanCard,
   })
   host.sessionSurfaces.register({ surface: 'composer.header', Component: ComposerHeader })
+  // "3/7 tasks" in the status bar: the chat's board as a checklist that ticks as cards finish.
+  host.statusItems.register({
+    id: 'kanban:tasks',
+    placement: 'statusbar',
+    useItem: useTaskStatusItem,
+  })
   host.commentActions.register({
     id: 'kanban:task',
     label: 'Task',

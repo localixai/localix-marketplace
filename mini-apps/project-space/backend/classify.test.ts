@@ -24,7 +24,8 @@ function classOf(name: string, input: unknown): CallClass {
 
 const rows: Array<[string, unknown, CallClass]> = [
   [SPACE_TOOLS.read, {}, { effect: 'read' }],
-  [SPACE_TOOLS.apply, { ops: [{ op: 'delete', id: 'e1' }] }, { effect: 'files' }],
+  // The board is Localix's own state, like the task board: a planning chat in Plan mode may draw.
+  [SPACE_TOOLS.apply, { ops: [{ op: 'delete', id: 'e1' }] }, { effect: 'session' }],
   [SPACE_TOOLS.view, { fit: true }, { effect: 'view' }],
 ]
 

@@ -81,8 +81,10 @@ export function createSpaceTools(ctx: MiniAppContext, resolveRoot: ResolveRoot) 
     inputSchema: z.object({ ops }),
     executionMode: 'sequential',
     mutates: true,
-    // Undeclared, the call classed as `external` — wider than the one board file it writes.
-    classify: () => ({ effect: 'files' }),
+    // The board is Localix's own state, like the task board: the one board file under `.localix/`,
+    // never a referenced file and never code. So a chat in Plan mode — which may change only its
+    // own state — can still draw the project's flow here.
+    classify: () => ({ effect: 'session' }),
     // The one file the call writes: the permission rules see a write inside the project, as they
     // would for the agent's own edit of it. Referenced files are only named, never written.
     permissionPaths: () => [declaredBoard],

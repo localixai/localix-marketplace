@@ -157,7 +157,12 @@ describe('kanban tool', () => {
   test('a field the action does not read is refused by name, and nothing is written', async () => {
     const { act } = tool()
     await act({ action: 'create', title: 'Card' })
-    const refused = await act({ action: 'update', task_id: 'LX-1', title: 'Renamed', kind: 'epic' })
+    const refused = await act({
+      action: 'update',
+      task_id: 'LX-1',
+      title: 'Renamed',
+      kind: 'epic',
+    })
     expect(refused.isError).toBe(true)
     expect(refused.content).toContain('update does not take kind (create)')
     expect((await act({ action: 'detail', task_id: 'LX-1' })).content).toContain('LX-1: Card')
@@ -258,14 +263,48 @@ describe('kanban tool', () => {
     expect((await act({ action: 'list' })).content).not.toContain('Build')
   })
 
-  test('an epic is created without a checklist of its own', async () => {
+  test('items given to an epic become its tasks, since an epic’s tasks are its checklist', async () => {
     const { act } = tool()
-    const refused = await act({
+    const made = await act({
       action: 'create',
-      creates: [{ title: 'Launch', kind: 'epic', items: ['Plan'] }],
+      creates: [
+        { title: 'Launch', kind: 'epic', items: ['Plan', { text: 'Ship', done: false }] },
+        { title: 'Retro', parent: 'Launch' },
+      ],
     })
-    expect(refused.isError).toBe(true)
-    expect(refused.content).toContain('An epic holds no checklist')
+    expect(made.isError).toBeUndefined()
+    const tasks = made.details?.tasks ?? []
+    expect(tasks.map((task) => [task.title, task.kind])).toEqual([
+      ['Launch', 'epic'],
+      ['Plan', 'task'],
+      ['Ship', 'task'],
+      ['Retro', 'task'],
+    ])
+    const epic = tasks[0]!
+    for (const title of ['Plan', 'Ship', 'Retro']) {
+      const detail = await act({ action: 'detail', task_id: title })
+      expect(detail.details?.task?.parentTaskId).toBe(epic.id)
+    }
+  })
+
+  test('a task naming a milestone not on the board yet creates that milestone first', async () => {
+    const { act } = tool()
+    const made = await act({
+      action: 'create',
+      creates: [
+        { title: 'Set up the repo', parent: 'M1: Foundation', items: ['Init'] },
+        { title: 'Add CI', parent: 'M1: Foundation' },
+      ],
+    })
+    expect(made.isError).toBeUndefined()
+    const tasks = made.details?.tasks ?? []
+    expect(tasks.map((task) => [task.title, task.kind])).toEqual([
+      ['M1: Foundation', 'epic'],
+      ['Set up the repo', 'task'],
+      ['Add CI', 'task'],
+    ])
+    const ci = await act({ action: 'detail', task_id: 'Add CI' })
+    expect(ci.details?.task?.parentTaskId).toBe(tasks[0]!.id)
   })
 
   test('reassigning a running card puts it back to ready for its new owner', async () => {

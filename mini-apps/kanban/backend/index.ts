@@ -2,6 +2,7 @@ import type { MiniAppContext, MiniAppRegistration } from '@localixai/mini-app-sd
 
 import { ROUTE_PATH } from '../shared/resource'
 import { createBoardResourceProvider, createBoardSearchProvider } from './references'
+import { createBoardMcp } from './mcp'
 import { createBoardRoutes } from './routes'
 import { createBoardService } from './service'
 import { createKanbanTools } from './tools'
@@ -38,7 +39,18 @@ export function register(ctx: MiniAppContext): MiniAppRegistration {
     backend: [
       {
         id: 'kanban:backend',
-        routeMount: { path: ROUTE_PATH, app: createBoardRoutes(boards, ctx.agents) },
+        routeMount: {
+          path: ROUTE_PATH,
+          // The view's routes, and the same board over MCP for a coding agent started in the chat.
+          app: createBoardRoutes(boards, ctx.agents).route(
+            '/',
+            createBoardMcp(ctx.z, (userId) => {
+              const [kanban] = createKanbanTools({ ...ctx, userId }, boards)
+              if (!kanban) throw new Error('The board tool is missing.')
+              return kanban as never
+            }),
+          ),
+        },
         wsFrames: createBoardWsFrames(boards),
         resourceProvider: createBoardResourceProvider(boards),
         searchProvider: createBoardSearchProvider(boards),
