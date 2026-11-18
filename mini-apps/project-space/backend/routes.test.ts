@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, test } from 'bun:test'
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
-import { join } from 'node:path'
+import { join, resolve } from 'node:path'
 import type { MiniAppRouteScope } from '@localixai/mini-app-sdk/backend'
 import { createSpaceRoutes } from './routes'
 import { spacePaths } from './paths'
@@ -79,13 +79,15 @@ describe('the board routes', () => {
 
   test('a path inside the project is stored relative, whoever wrote it absolute', async () => {
     const { root, send } = project()
+    // An absolute path in this platform's own spelling (a drive letter on Windows).
+    const outside = resolve('/elsewhere/b.ts')
     const ops = [
       { op: 'create', type: 'file', id: 'in', props: { path: join(root, 'src', 'a.ts') } },
-      { op: 'create', type: 'file', id: 'out', props: { path: '/elsewhere/b.ts' } },
+      { op: 'create', type: 'file', id: 'out', props: { path: outside } },
     ]
     const { space } = await (await send('POST', '/ops', { ops })).json()
     expect(space.elements.in.props.path).toBe('src/a.ts')
-    expect(space.elements.out.props.path).toBe('/elsewhere/b.ts')
+    expect(space.elements.out.props.path).toBe(outside)
   })
 
   test('file routes read the project and what the board references — nothing else', async () => {

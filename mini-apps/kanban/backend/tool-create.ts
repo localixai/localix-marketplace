@@ -47,10 +47,36 @@ export async function createCards(
       'mixed_create',
       `create got ${beside.join(', ')} beside creates. Put every card in creates, the epic first: [{ title, kind: "epic" }, { title, parent: "<epic title>" }, …].`,
     )
-  const entries = input.creates?.length ? input.creates : [{ ...input, title: input.title ?? '' }]
+  const requested = input.creates?.length ? input.creates : [{ ...input, title: input.title ?? '' }]
+  // An epic's tasks ARE its checklist: items given to an epic become tasks under it, right after it.
+  // A model planning milestones writes them that way more often than not.
+  const entries = requested.flatMap((entry): CreateEntry[] =>
+    entry.kind === 'epic' && entry.items?.length
+      ? [
+          { ...entry, items: undefined },
+          ...entry.items.map((item) => ({
+            title: typeof item === 'string' ? item : item.text,
+            kind: 'task' as const,
+            parent: entry.title,
+          })),
+        ]
+      : [entry],
+  )
+  // A task may name a milestone that is neither on the board nor in this batch: a model planning
+  // milestones often lists only their tasks. The milestone is created as an epic just before them.
+  const onBoard = (await boards.read(chat)).tasks
+  const known = (title: string) =>
+    entries.some((entry) => entry.title === title) || isOnBoard(onBoard, title)
+  const missing = new Set<string>()
+  const withParents = entries.flatMap((entry): CreateEntry[] => {
+    const parent = entry.parent?.trim()
+    if (!parent || known(parent) || missing.has(parent)) return [entry]
+    missing.add(parent)
+    return [{ title: parent, kind: 'epic' }, entry]
+  })
   const created: KanbanTask[] = []
   let refused: string | null = null
-  for (const [index, entry] of entries.entries()) {
+  for (const [index, entry] of withParents.entries()) {
     try {
       if (!entry.title.trim())
         throw new BoardRefusal(400, 'title_required', 'create requires title.')
@@ -103,5 +129,14 @@ export async function createCards(
         description: 'This chat’s board',
       }),
     },
+  }
+}
+
+/** A card the board already has under this reference (id or title). */
+function isOnBoard(tasks: readonly KanbanTask[], reference: string): boolean {
+  try {
+    return resolveTaskReference(tasks, reference) !== null
+  } catch {
+    return false
   }
 }
